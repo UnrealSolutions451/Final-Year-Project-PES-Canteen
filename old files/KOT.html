@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KOT - Kitchen Order Tickets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --primary: #03045e;
+      --card-bg: #fff;
+      --shadow: 0 6px 18px rgba(2,6,23,0.12);
+      --radius: 12px;
+      --accent: #46a0fa;
+      --bg: #f3f6ff;
+      --text: #222;
+    }
+    * { box-sizing: border-box; margin:0; padding:0; font-family: Inter, "Segoe UI", Arial; }
+    body { background: linear-gradient(180deg,#eaf2ff 0%, #f8fbff 100%); color: var(--text); min-height:100vh; padding:20px; }
+    header { text-align:center; margin-bottom:18px; }
+    header h1 { color: var(--primary); font-size:1.8rem; letter-spacing:0.4px; }
+    .orders-grid { 
+      display:grid; 
+      grid-template-columns: repeat(auto-fill, minmax(360px,1fr)); 
+      gap:18px; 
+      max-width:1200px; 
+      margin:0 auto; 
+    }
+    .kot-card { background:var(--card-bg); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; display:flex; flex-direction:column; gap:12px; }
+    .kot-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .kot-table { font-weight:800; color:var(--primary); font-size:1.05rem; }
+    .kot-code { font-size:0.95rem; color:#444; font-weight:600; }
+    .kot-items { margin-top:4px; font-size:0.98rem; color:#333; }
+    .kot-item { display:flex; justify-content:space-between; gap:8px; padding:6px 8px; border-radius:8px; background:#fbfdff; }
+    .kot-meta { display:flex; gap:10px; color:#666; font-size:0.88rem; margin-top:8px; }
+    .empty { text-align:center; color:#666; margin-top:40px; font-weight:600; }
+    @media (max-width:720px) { .orders-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>KOT — Accepted Orders (Kitchen)</h1>
+</header>
+
+<main>
+  <div id="orders" class="orders-grid"></div>
+  <div id="empty" class="empty" style="display:none;">No accepted orders at the moment.</div>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import {
+    getFirestore, collection, query, where, onSnapshot, getDocs
+  } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const ordersDiv = document.getElementById("orders");
+  const emptyDiv = document.getElementById("empty");
+
+  // 🔔 Bell sound
+  const bellAudio = new Audio("./bell.mp3");
+  bellAudio.preload = "auto";
+
+  function speak(text) {
+    if (!("speechSynthesis" in window)) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "en-IN";
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+  }
+
+  const announcedOrders = new Set();
+
+  async function fetchOrderItems(order) {
+    try {
+      const itemsRef = collection(db, "orders", order.id, "items");
+      const itemsSnap = await getDocs(itemsRef);
+      if (!itemsSnap.empty) {
+        return itemsSnap.docs.map(d => {
+          const data = d.data();
+          return {
+            name: data.name || d.id,
+            quantity: Number(data.quantity ?? 1),
+            price: Number(data.price ?? 0)
+          };
+        });
+      }
+      return Array.isArray(order.items) ? order.items : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function buildOrderSpeech(items) {
+    if (!items.length) return "New order received.";
+    return "New order received. " + items.map(i => `${i.quantity} ${i.name}`).join(" and ");
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"]/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'
+    })[c]);
+  }
+
+  function renderCard(order, items) {
+    const card = document.createElement("div");
+    card.className = "kot-card";
+
+    const total = order.totalAmount ?? items.reduce((s,i)=>s+(i.price*i.quantity),0);
+
+    card.innerHTML = `
+      <div class="kot-head">
+        <div>
+          <div class="kot-table">Table ${escapeHtml(order.table || "-")}</div>
+          <div class="kot-code">Code: ${escapeHtml(order.orderCode || order.id)}</div>
+        </div>
+        <div style="font-weight:800;">₹${total}</div>
+      </div>
+
+      <div class="kot-items">
+        ${items.map(i => `
+          <div class="kot-item">
+            <div>${escapeHtml(i.name)}</div>
+            <div>${i.quantity} × ${i.price}</div>
+          </div>`).join("")}
+      </div>
+
+      <div class="kot-meta">
+        <div>Time: ${escapeHtml(order.time || "-")}</div>
+        <div>Date: ${escapeHtml(order.date || "-")}</div>
+      </div>
+    `;
+    return card;
+  }
+
+  async function renderOrders(orders) {
+    ordersDiv.innerHTML = "";
+    if (!orders.length) {
+      emptyDiv.style.display = "block";
+      return;
+    }
+    emptyDiv.style.display = "none";
+
+    for (const o of orders) {
+      const items = await fetchOrderItems(o);
+      ordersDiv.appendChild(renderCard(o, items));
+    }
+  }
+
+  const acceptedQ = query(collection(db, "orders"), where("status", "==", "accepted"));
+
+  onSnapshot(acceptedQ, async snapshot => {
+    const orders = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+
+    // ✅ OLDEST FIRST (LEFT → RIGHT)
+    orders.sort((a,b) => {
+      const ta = a.timestamp?.toMillis?.() ?? 0;
+      const tb = b.timestamp?.toMillis?.() ?? 0;
+      return ta - tb;
+    });
+
+    for (const order of orders) {
+      if (!announcedOrders.has(order.id)) {
+        announcedOrders.add(order.id);
+        const items = await fetchOrderItems(order);
+        bellAudio.currentTime = 0;
+        bellAudio.play().catch(()=>{});
+        setTimeout(() => speak(buildOrderSpeech(items)), 700);
+      }
+    }
+
+    renderOrders(orders);
+  });
+
+  document.body.addEventListener("click", () => {
+    bellAudio.play().catch(()=>{});
+  }, { once: true });
+
+</script>
+
+</body>
+</html>

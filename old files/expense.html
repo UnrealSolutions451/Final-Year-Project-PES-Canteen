@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Expense Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #46a0fa;
+      --danger: #d22c27;
+      --success: #28a745;
+      --card-bg: #fff;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+      --transition: all 0.3s ease;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      color: #333;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 600;
+      position: relative;
+    }
+    main { padding: 20px; max-width: 1000px; margin: auto; }
+
+    .form-box, .stats, .list {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 35px;
+      margin-bottom: 20px;
+    }
+    h2 { margin-bottom: 12px; font-size: 1.2rem; }
+
+    input, select, button {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      width: 100%;
+      font-size: 1rem;
+    }
+    button {
+      background: var(--secondary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    button:hover { background: #2680e8; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .stat {
+      background: #ebebeb;
+      border-radius: var(--border-radius);
+      padding: 14px;
+      text-align: center;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .stat span { display: block; margin-top: 6px; font-size: 1.5rem; color:#28a745; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+    th { background: #f0f0f0; }
+
+    .logout-container {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+    }
+
+    #logoutBtn {
+      background: #d22c27;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    #logoutBtn:hover {
+      background: #a71d2a;
+    }
+
+    .admin-nav {
+    background: var(--primary, #03045e);
+    color: white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+  }
+  .nav-logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 18px;
+  }
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+  .nav-links a:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  .nav-links a.active {
+    /* background: var(--accent, #FFD166); */
+    color: #FFD166;
+    font-weight: 700;
+  }
+  /* Mobile */
+  .nav-toggle {
+    display: none;
+    font-size: 1.4rem;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+  }
+  @media (max-width: 768px) {
+    .nav-links {
+      position: absolute;
+      top: 56px;
+      right: 0;
+      background: var(--primary, #03045e);
+      flex-direction: column;
+      width: 200px;
+      padding: 10px;
+      display: none;
+    }
+    .nav-links.show {
+      display: flex;
+    }
+    .nav-toggle {
+      display: block;
+    }
+  }
+  </style>
+</head>
+
+<body>
+  <script type="module" src="auth-guard.js"></script>
+  <header>
+    Expense Manager
+    <div class="logout-container">
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </header>
+  <nav class="admin-nav">
+  <div class="nav-container">
+    <div class="nav-logo">P.E.S. Canteen — Admin</div>
+
+    <button class="nav-toggle" id="navToggle">☰</button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="admin-dashboard.html">Dashboard</a></li>
+      <li><a href="analytics.html">Analytics</a></li>
+      <li><a href="expense.html">Expenses</a></li>
+      <li><a href="staff-managment.html">Staff</a></li>
+    </ul>
+  </div>
+</nav>
+
+  <main>
+    <!-- Expense Form -->
+    <div class="form-box">
+      <h2>Add Expense</h2>
+      <form id="expenseForm">
+        <input type="date" id="date">        
+        <input type="text" id="description" placeholder="Description" required>
+        <input type="number" id="amount" placeholder="Amount (₹)" step="0.01" required>
+        <button type="submit" style="background-color: #03045e;">Add Expense</button>
+      </form>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <h2>Summary</h2>
+      <div class="stats-grid">
+        <div class="stat">Today's Expense: <span id="todayExpense" style="color: #d22c27;">₹0</span></div>
+        <div class="stat">Today's Sales: <span id="todaySales">₹0</span></div>
+        <div class="stat">This Month's Expense: <span id="monthExpense" style="color: #d22c27;">₹0</span></div>
+        <div class="stat">This Month's Sales: <span id="monthSales">₹0</span></div>
+        <div class="stat">Total Expense: <span id="totalExpense" style="color: #d22c27;">₹0</span></div>
+        <div class="stat">Total Sales: <span id="totalSales">₹0</span></div>
+      </div>
+    </div>
+
+    <!-- Expense List -->
+    <div class="list">
+      <h2>Expenses</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Amount (₹)</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="expenseList"></tbody>
+      </table>
+    </div>
+  </main>
+
+    <script>
+  // Toggle mobile nav
+  document.getElementById("navToggle").onclick = () => {
+    document.getElementById("navLinks").classList.toggle("show");
+  };
+
+  // Highlight current page
+  const links = document.querySelectorAll(".nav-links a");
+  links.forEach(link => {
+    if (link.href === window.location.href) {
+      link.classList.add("active");
+    }
+  });
+</script>
+
+  <!-- Firebase (v9 modular) -->
+  <script type="module">
+    import { db, auth } from "./firebase-config.js";
+    import { collection, addDoc, orderBy, query, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    const expenseForm = document.getElementById("expenseForm");
+    const expenseList = document.getElementById("expenseList");
+
+    const todayExpenseEl = document.getElementById("todayExpense");
+    const monthExpenseEl = document.getElementById("monthExpense");
+    const totalExpenseEl = document.getElementById("totalExpense");
+
+    const todaySalesEl = document.getElementById("todaySales");
+    const monthSalesEl = document.getElementById("monthSales");
+    const totalSalesEl = document.getElementById("totalSales");
+
+    const todayDate = new Date().toISOString().split("T")[0];
+    document.getElementById("date").value = todayDate;
+
+    function normalizeDate(dateStr) {
+      if (!dateStr) return "";
+      return new Date(dateStr).toISOString().split("T")[0];
+    }
+
+    // Add Expense
+    expenseForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const desc = document.getElementById("description").value;
+      const amt = parseFloat(document.getElementById("amount").value);
+      const date = document.getElementById("date").value || todayDate;
+
+      await addDoc(collection(db, "expenses"), {
+        description: desc,
+        amount: amt,
+        date
+      });
+
+      expenseForm.reset();
+      document.getElementById("date").value = todayDate;
+    });
+
+    // Load Expenses
+    const expQ = query(collection(db, "expenses"), orderBy("date", "desc"));
+    onSnapshot(expQ, snapshot => {
+      let expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      let todayExp = 0, monthExp = 0, totalExp = 0;
+      const currentMonth = todayDate.slice(0,7);
+
+      expenseList.innerHTML = expenses.map(exp => {
+        totalExp += exp.amount;
+        if(exp.date === todayDate) todayExp += exp.amount;
+        if(exp.date.startsWith(currentMonth)) monthExp += exp.amount;
+        return `<tr>
+          <td>${exp.description}</td>
+          <td>₹${exp.amount.toFixed(2)}</td>
+          <td>${exp.date}</td>
+        </tr>`;
+      }).join("");
+
+      todayExpenseEl.textContent = `₹${todayExp.toFixed(2)}`;
+      monthExpenseEl.textContent = `₹${monthExp.toFixed(2)}`;
+      totalExpenseEl.textContent = `₹${totalExp.toFixed(2)}`;
+    });
+
+    // Load Sales
+    const salesQ = query(collection(db, "orders"), orderBy("timestamp", "desc"));
+    onSnapshot(salesQ, snapshot => {
+      let orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let todaySales = 0, monthSales = 0, totalSales = 0;
+      const currentMonth = todayDate.slice(0,7);
+
+      orders.forEach(order => {
+        const orderDate = normalizeDate(order.date);
+        const originalTotal = order.items.reduce((s,i)=>s+((i.price||0)*(i.quantity||1)),0);
+        const total = order.totalAmount || originalTotal;
+
+        if(order.status === "completed"){
+          totalSales += total;
+          if(orderDate.startsWith(currentMonth)) monthSales += total;
+          if(orderDate === todayDate) todaySales += total;
+        }
+      });
+
+      todaySalesEl.textContent = `₹${todaySales}`;
+      monthSalesEl.textContent = `₹${monthSales}`;
+      totalSalesEl.textContent = `₹${totalSales}`;
+    });
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      try {
+        const currentPage = encodeURIComponent(window.location.pathname);
+        await signOut(auth);
+        window.location.href = `login.html?redirect=${currentPage}`;
+      } catch (err) {
+        console.error("Logout error:", err);
+        alert("Error logging out. Please try again.");
+      }
+    });
+  </script>
+</body>
+</html>

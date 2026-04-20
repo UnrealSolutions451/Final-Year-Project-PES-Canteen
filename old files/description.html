@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Item Details - P.E.S. Canteen</title>
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #46a0fa;
+      --price: #d22c27;
+      --accent: #FFD166;
+      --background: #F7FFF7;
+      --text: #292F36;
+      --card-bg: #FFFFFF;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--background);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    header h1 { font-size: 1.4rem; margin: 0; }
+
+    main {
+      flex: 1;
+      max-width: 600px;
+      margin: 20px auto;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      text-align: center;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .image-container {
+      width: 100%;
+      height: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      box-shadow: var(--shadow);
+    }
+
+    .item-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .item-name { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; color: var(--primary); }
+    .item-price { font-size: 1.3rem; color: var(--price); margin-bottom: 10px; font-weight: 600; }
+    .item-desc { color: #555; font-size: 1rem; margin-bottom: 20px; line-height: 1.5; }
+
+    .add-btn {
+      padding: 12px 20px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      width: 100%;
+      max-width: 300px;
+    }
+    .add-btn:hover { background: var(--secondary); }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 16px;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .back-btn:hover { text-decoration: underline; }
+
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    .toast.show { opacity: 1; }
+
+    footer {
+      background: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 0.9rem;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Item Details</h1>
+  </header>
+
+  <main>
+    <div class="image-container">
+      <img id="itemImage" class="item-image" src="placeholder-food.jpg" alt="Item Image" />
+    </div>
+    <h2 id="itemName" class="item-name">Loading...</h2>
+    <p id="itemPrice" class="item-price">₹--</p>
+    <p id="itemDesc" class="item-desc">Please wait...</p>
+
+    <button id="addBtn" class="add-btn">Add to Cart</button>
+    <a id="backBtn" class="back-btn">← Back to Menu</a>
+  </main>
+
+  <div class="toast" id="toast">Added to cart!</div>
+
+  <footer>
+    <p>&copy; 2025 P.E.S. Canteen. All rights reserved.</p>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const itemImage = document.getElementById("itemImage");
+    const itemName = document.getElementById("itemName");
+    const itemPrice = document.getElementById("itemPrice");
+    const itemDesc = document.getElementById("itemDesc");
+    const addBtn = document.getElementById("addBtn");
+    const toast = document.getElementById("toast");
+    const backBtn = document.getElementById("backBtn");
+
+    const params = new URLSearchParams(window.location.search);
+    const itemId = params.get("id");
+    const tableId = params.get("table");
+    const sessionId = params.get("session");
+
+    function getCartKey() {
+      return `cart_${tableId}_${sessionId}`;
+    }
+
+    function showToast(msg = 'Added to cart!') {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    // 🧭 Back button logic
+    backBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (document.referrer && !document.referrer.includes("description.html")) {
+        history.back();
+      } else {
+        // fallback if no history
+        window.location.href = `index.html?table=${tableId || ""}&session=${sessionId || ""}`;
+      }
+    });
+
+    async function loadItem() {
+      if (!itemId) {
+        itemName.textContent = "Item not found";
+        return;
+      }
+
+      try {
+        const docRef = doc(db, "menu", itemId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          itemImage.src = data.image || "placeholder-food.jpg";
+          itemName.textContent = data.name || "Unnamed Item";
+          itemPrice.textContent = "₹" + (data.price || 0);
+          itemDesc.textContent = data.description || "No description available.";
+          addBtn.addEventListener("click", () => addToCart({ id: itemId, ...data }));
+        } else {
+          itemName.textContent = "Item not found";
+        }
+      } catch (error) {
+        console.error("Error loading item:", error);
+        itemDesc.textContent = "Error loading item details.";
+      }
+    }
+
+    function addToCart(item) {
+      const cart = JSON.parse(localStorage.getItem(getCartKey())) || [];
+      const existingIdx = cart.findIndex(ci => ci.id === item.id);
+      if (existingIdx >= 0) {
+        cart[existingIdx].quantity = (cart[existingIdx].quantity || 1) + 1;
+      } else {
+        cart.push({ id: item.id, name: item.name, price: item.price, quantity: 1 });
+      }
+      localStorage.setItem(getCartKey(), JSON.stringify(cart));
+      showToast();
+    }
+
+    loadItem();
+  </script>
+</body>
+</html>

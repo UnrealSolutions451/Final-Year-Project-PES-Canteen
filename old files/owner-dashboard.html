@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  :root {
+    --primary: #03045e;
+      --secondary: #46a0fa;
+      --price: #d22c27;
+      --buttons: #46a0fa;
+    --accent: #FFD166;
+    --background: #F7FFF7;
+    --text: #2b2c2d;
+    --card-bg: #FFFFFF;
+    --border-radius: 12px;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  body {
+    background: var(--background);
+    color: var(--text);
+    font-weight: 500;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 20px;
+    text-align: center;
+    font-size: 1.75rem;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+
+  main {
+    padding: 16px;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    flex: 1;
+  }
+
+  /* Stats Bar */
+  .stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .stat-box {
+    flex: 1 1 200px;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+    font-weight: 700;
+    color: var(--primary);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    font-size: 1rem;
+    min-width: 180px;
+  }
+  .stat-box:hover { background: #fff5f5; }
+  .stat-box.active { background: #28a745; color: white; }
+
+  /* Filter */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .filter-bar label { 
+    font-weight: 600; 
+    font-size: 0.95rem; 
+    margin-right: 6px;
+  }
+  .filter-bar select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: white;
+    font-size: 0.9rem;
+    flex: 0 1 180px;
+    outline: none;
+    transition: var(--transition);
+  }
+  .filter-bar select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(210,44,39,0.12); }
+
+  #orderCount {
+    margin-bottom: 16px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+  }
+
+  /* Orders */
+  .orders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .order {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.2s ease;
+  }
+  .order:hover { transform: translateY(-3px); }
+
+  .order strong { color: var(--primary); }
+  s { color:#8c8c8c; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+  }
+  #toast.show { opacity: 1; }
+
+  /* 🔥 Mobile Fixes */
+  @media (max-width: 720px) {
+    .stats {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .stat-box { 
+      flex: 0 0 auto;
+      font-size: 0.85rem;  
+      padding: 10px 12px; 
+      min-width: 150px;
+      
+    }
+    .filter-bar { 
+      flex-direction: row; 
+      justify-content: space-between; 
+      flex-wrap: nowrap; 
+      overflow-x: auto;
+    }
+    .filter-bar label { font-size: 0.85rem; white-space: nowrap; }
+    .filter-bar select { font-size: 0.85rem; padding: 6px 10px; min-width: 140px; }
+  }
+
+  @media (max-width: 480px) {
+    header { font-size: 1.4rem; padding: 12px; }
+    .stat-box { font-size: 0.75rem; padding: 8px 10px; min-width: 130px; }
+    .order { font-size: 0.85rem; }
+    .filter-bar { gap: 6px; }
+    .filter-bar label { font-size: 0.8rem; }
+    .filter-bar select { font-size: 0.8rem; padding: 5px 8px; min-width: 120px; }
+  }
+</style>
+
+</head>
+<body>
+  <header>Admin Dashboard</header>
+
+  <main>
+    <!-- Sales Stats -->
+    <div class="stats">
+      <div class="stat-box" id="todaySales">Today's Sales: ₹0</div>
+      <div class="stat-box" id="monthSales">This Month's Sales: ₹0</div>
+      <div class="stat-box" id="totalSales">Total Sales: ₹0</div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-bar">
+      <label for="filter">Filter Orders:</label>
+      <select id="filter">
+        <option value="all">All</option>
+        <option value="today">Today</option>
+        <option value="month">This Month</option>
+        <option value="completed">Completed</option>
+        <option value="pending">Pending</option>
+      </select>
+    </div>
+
+    <!-- Order Count -->
+    <div id="orderCount">Showing 0 orders</div>
+
+    <!-- Orders -->
+    <div id="orders" class="orders-grid"></div>
+  </main>
+
+  <div id="toast"></div>
+
+  <!-- Firebase v8 SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- Your Config -->
+  <script src="firebase-config.js"></script>
+
+  <script>
+    const ordersDiv = document.getElementById("orders");
+    const filterSelect = document.getElementById("filter");
+    const todaySalesEl = document.getElementById("todaySales");
+    const monthSalesEl = document.getElementById("monthSales");
+    const totalSalesEl = document.getElementById("totalSales");
+    const orderCountEl = document.getElementById("orderCount");
+
+    let unsubscribeOrders = null;
+
+    function normalizeDate(dateStr) {
+      if (!dateStr) return "";
+      return new Date(dateStr).toISOString().split("T")[0];
+    }
+
+    function highlightStatBox(box) {
+      document.querySelectorAll(".stat-box").forEach(el => el.classList.remove("active"));
+      if (box) box.classList.add("active");
+    }
+
+    function loadOrders() {
+      const filterValue = filterSelect.value;
+      const todayDate = new Date().toISOString().split("T")[0];
+      const currentMonth = todayDate.slice(0, 7);
+
+      if (unsubscribeOrders) unsubscribeOrders();
+
+      unsubscribeOrders = db.collection("orders")
+        .orderBy("timestamp", "desc")
+        .onSnapshot(snapshot => {
+          let allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          let filteredOrders = [];
+          let todaySales = 0;
+          let monthSales = 0;
+          let totalSales = 0;
+
+          allOrders.forEach(order => {
+            const orderDate = normalizeDate(order.date);
+            const originalTotal = order.items.reduce((sum, i) => sum + ((i.price||0)*(i.quantity||1)), 0);
+            const total = order.totalAmount || originalTotal;
+
+            if(order.status === "completed") {
+              totalSales += total;
+              if(orderDate.startsWith(currentMonth)) monthSales += total;
+              if(orderDate === todayDate) todaySales += total;
+            }
+          });
+
+          filteredOrders = allOrders.filter(order => {
+            const orderDate = normalizeDate(order.date);
+            if (filterValue === "today" && orderDate !== todayDate) return false;
+            if (filterValue === "month" && !orderDate.startsWith(currentMonth)) return false;
+            if (filterValue === "completed" && order.status !== "completed") return false;
+            if (filterValue === "pending" && !["pending", "accepted"].includes(order.status)) return false;
+            return true;
+          });
+
+          ordersDiv.innerHTML = filteredOrders.length
+            ? filteredOrders.map(order => {
+                const originalTotal = order.items.reduce((sum,i) => sum + ((i.price||0)*(i.quantity||1)),0);
+                const total = order.totalAmount || originalTotal;
+                const totalHtml = (order.totalAmount && order.totalAmount !== originalTotal)
+                  ? `<s>₹${originalTotal}</s> ₹${total}`
+                  : `₹${total}`;
+                return `
+                  <div class="order">
+                    <p><strong>Table:</strong> ${order.table || "-"}</p>
+                    <p><strong>Items:</strong> ${order.items.map(i => `${i.name} x ${i.quantity||1}`).join(", ")}</p>
+                    <p><strong>Total:</strong> ${totalHtml}</p>
+                    <p><strong>Order Code:</strong> ${order.orderCode}</p>
+                    <p><strong>Status:</strong> ${order.status}</p>
+                    <p><strong>Date:</strong> ${order.date || "-"} <strong>Time:</strong> ${order.time || "-"}</p>
+                  </div>
+                `;
+              }).join("")
+            : "<p>No orders found.</p>";
+
+          orderCountEl.textContent = `Showing ${filteredOrders.length} order${filteredOrders.length !== 1 ? "s" : ""}`;
+          todaySalesEl.textContent = `Today's Sales: ₹${todaySales}`;
+          monthSalesEl.textContent = `This Month's Sales: ₹${monthSales}`;
+          totalSalesEl.textContent = `Total Sales: ₹${totalSales}`;
+        }, err => {
+          console.error("Snapshot error:", err);
+          ordersDiv.innerHTML = `<p style="color:red;">Error loading orders: ${err.message}</p>`;
+        });
+    }
+
+    filterSelect.addEventListener("change", () => { highlightStatBox(null); loadOrders(); });
+    todaySalesEl.addEventListener("click", () => { filterSelect.value="today"; highlightStatBox(todaySalesEl); loadOrders(); });
+    monthSalesEl.addEventListener("click", () => { filterSelect.value="month"; highlightStatBox(monthSalesEl); loadOrders(); });
+    totalSalesEl.addEventListener("click", () => { filterSelect.value="all"; highlightStatBox(totalSalesEl); loadOrders(); });
+
+    loadOrders();
+  </script>
+</body>
+</html>

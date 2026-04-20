@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Canteen Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- QR Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    :root { --primary:#03045e; --bg:#F7FFF7; --shadow:0 4px 6px rgba(0,0,0,.1); }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui}
+    body{background:var(--bg);min-height:100vh;display:flex;flex-direction:column}
+
+    header{
+      background:var(--primary);color:#fff;height:90px;display:flex;align-items:center;
+      justify-content:center;position:sticky;top:0;z-index:10;box-shadow:var(--shadow)
+    }
+    .logo{position:absolute;left:20px;max-height:70px}
+    .logout-container{position:absolute;right:20px;top:25px}
+    #logoutBtn{background:#d22c27;color:#fff;border:none;padding:8px 16px;border-radius:20px}
+
+    main{padding:16px;max-width:1300px;margin:auto;width:100%}
+    .row{display:flex;gap:10px;margin:10px 0 18px;flex-wrap:wrap}
+    .input{flex:1;padding:12px;border:1px solid #ddd;border-radius:10px}
+    .btn{padding:10px 16px;border:none;border-radius:10px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-scan{background:#1f7ae0;color:#fff}
+    .btn-danger{background:#ff6a00;color:#fff}
+    .btn-pay{background:#1a8f3d;color:#fff}
+
+    .columns-wrap{display:grid;grid-template-columns:1fr 1px 1fr;gap:16px}
+    .divider{background:#d0d7e2;width:1px}
+    @media(max-width:900px){.columns-wrap{grid-template-columns:1fr}.divider{display:none}}
+
+    h2{text-align:center;margin-bottom:10px}
+    .orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+
+   .order-card{
+  background:#fff;
+  border-radius:12px;
+  padding:14px;
+  box-shadow:var(--shadow)
+}
+
+.order-card.highlight{
+  outline:4px solid #46a0fa;
+  box-shadow:0 0 0 6px rgba(70,160,250,.25)
+}
+
+.order-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:6px;
+}
+
+.status{
+  padding:5px 10px;
+  border-radius:20px;
+  font-size:.8rem;
+  font-weight:700;
+  align-self:flex-start;
+  white-space:nowrap;
+}
+.pending{background:#ffe3e3}
+.accepted{background:#fff8c5}
+.ready{background:#d3ffd3}
+
+
+    .status{padding:5px 10px;border-radius:20px;font-size:.8rem;font-weight:700}
+    .pending{background:#ffe3e3}.accepted{background:#fff8c5}.ready{background:#d3ffd3}
+
+    .order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .order-actions .btn{flex:1}
+
+    .payment-modal,.scanner-modal{
+      position:fixed;inset:0;background:rgba(0,0,0,.7);
+      display:none;align-items:center;justify-content:center;z-index:1000
+    }
+    .payment-box,.scanner-box{
+      background:#fff;padding:20px;border-radius:14px;width:95%;max-width:400px;text-align:center
+    }
+    .payment-box img{width:230px;height:230px;margin-top:10px}
+    .pay-options{display:flex;gap:10px;margin-top:10px}
+    .closeBtn{margin-top:12px;padding:8px 14px;border:none;border-radius:8px;background:#d22c27;color:#fff}
+    #qr-reader{width:100%}
+  
+          .admin-nav {
+    background: var(--primary, #03045e);
+    color: white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+  }
+  .nav-logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 18px;
+  }
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+  .nav-links a:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  .nav-links a.active {
+    /* background: var(--accent, #FFD166); */
+    color: #FFD166;
+    font-weight: 700;
+  }
+  /* Mobile */
+  .nav-toggle {
+    display: none;
+    font-size: 1.4rem;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+  }
+  @media (max-width: 768px) {
+    .nav-links {
+      position: absolute;
+      top: 56px;
+      right: 0;
+      background: var(--primary, #03045e);
+      flex-direction: column;
+      width: 200px;
+      padding: 10px;
+      display: none;
+    }
+    .nav-links.show {
+      display: flex;
+    }
+    .nav-toggle {
+      display: block;
+    }
+  }
+  
+  </style>
+</head>
+
+<body>
+<script type="module" src="auth-guard.js"></script>
+
+<header>
+  <img src="Pes_logo.png" class="logo">
+  <h1>P.E.S. Canteen Panel</h1>
+  <div class="logout-container"><button id="logoutBtn">Logout</button></div>
+</header>
+  
+<nav class="admin-nav">
+  <div class="nav-container">
+    <div class="nav-logo"></div>
+
+    <button class="nav-toggle" id="navToggle">☰</button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="canteen.html">Canteen Panel</a></li>
+      <li><a href="menumanagment.html">Menu</a></li>
+      <li><a href="AddMenu.html">Add/Edit Menu</a></li>
+      <li><a href="staff-attendance.html">Staff Attendance</a></li>
+      <li><a href="KOT.html">KOT</a></li>
+      <li><a href="Ready.html">Ready Screen</a></li>
+      
+    </ul>
+  </div>
+</nav>
+<main>
+  <div class="row">
+    <input id="searchCode" class="input" placeholder="Search / Scan Order Code">
+    <button class="btn btn-primary" id="findBtn">Find</button>
+    <button class="btn btn-scan" onclick="openScanner()">Scan</button>
+  </div>
+
+  <div class="columns-wrap">
+    <div>
+      <h2>Pending Orders</h2>
+      <div id="pendingOrders" class="orders-grid"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <h2>Accepted / Ready Orders</h2>
+      <div id="acceptedOrders" class="orders-grid"></div>
+    </div>
+  </div>
+</main>
+
+<!-- PAYMENT -->
+<div class="payment-modal" id="paymentModal">
+  <div class="payment-box">
+    <h3>Select Payment Mode</h3>
+    <p id="amountText"></p>
+
+    <div id="payOptions" class="pay-options">
+      <button class="btn btn-primary" id="cashBtn">Cash</button>
+      <button class="btn btn-pay" id="onlineBtn">Online</button>
+    </div>
+
+    <img id="qrImage" style="display:none">
+
+    <button class="closeBtn" onclick="closePayment()">Close</button>
+  </div>
+</div>
+
+<!-- SCANNER -->
+<div class="scanner-modal" id="scannerModal">
+  <div class="scanner-box">
+    <h3>Scan Order QR</h3>
+    <div id="qr-reader"></div>
+    <button class="closeBtn" onclick="closeScanner()">Close</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  getFirestore, collection, query, onSnapshot,
+  doc, updateDoc, deleteDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+const auth=getAuth(app);
+
+logoutBtn.onclick=async()=>{await signOut(auth);location.href="loginMain.html"}
+
+const pendingDiv=document.getElementById("pendingOrders");
+const acceptedDiv=document.getElementById("acceptedOrders");
+let highlighted=null;
+let currentPayOrder=null;
+
+/* LIVE ORDERS */
+onSnapshot(query(collection(db,"orders")),snap=>{
+  const pending=[],accepted=[];
+  snap.forEach(d=>{
+    const o=d.data();o.id=d.id;
+    if(o.status==="pending") pending.push(o);
+    else if(o.status==="accepted"||o.status==="ready") accepted.push(o);
+  });
+  render(pending,pendingDiv,true);
+  render(accepted,acceptedDiv,false);
+});
+
+/* RENDER */
+function render(list, container, showPay) {
+  container.innerHTML = "";
+
+  list.forEach(o => {
+    const items = o.items || [];
+    let total = 0;
+
+    const txt = items.map(i => {
+      const q = i.quantity || 1;
+      const p = i.price || 0;
+      total += q * p;
+      return `${i.name} x ${q}`;
+    });
+
+    const tableLabel =
+      o.table ||
+      o.tableNumber ||
+      o.tableName ||
+      null;
+
+    const div = document.createElement("div");
+    div.className = "order-card";
+    div.id = "order-" + o.orderCode;
+
+    div.innerHTML = `
+      <div class="order-head">
+        <div>
+          <strong>${o.orderCode}</strong>
+          ${tableLabel ? `
+            <div style="font-size:0.85rem;color:#555;margin-top:2px">
+              Table: ${tableLabel}
+            </div>
+          ` : ""}
+        </div>
+        <span class="status ${o.status}">${o.status}</span>
+      </div>
+
+      <p><b>Items:</b> ${txt.join(", ")}</p>
+      <p><b>Total:</b> ₹${total}</p>
+
+      <div class="order-actions">
+        ${o.status === "pending" ? `<button class="btn btn-primary">Accept</button>` : ""}
+        ${o.status === "accepted" ? `<button class="btn btn-primary">Complete</button>` : ""}
+        ${o.status === "ready" ? `<button class="btn btn-primary">Received</button>` : ""}
+        ${showPay ? `<button class="btn btn-pay">Payment</button>` : ""}
+        <button class="btn btn-danger">Delete</button>
+      </div>
+    `;
+
+    const btns = div.querySelectorAll("button");
+    let i = 0;
+
+    if (o.status === "pending") btns[i++].onclick = () => setStat(o.id, "accepted");
+    if (o.status === "accepted") btns[i++].onclick = () => setStat(o.id, "ready");
+    if (o.status === "ready") btns[i++].onclick = () => setStat(o.id, "completed");
+    if (showPay) btns[i++].onclick = () => openPayment(o, total);
+    btns[i].onclick = () => del(o.id);
+
+    container.appendChild(div);
+  });
+}
+
+
+/* STATUS + DELETE */
+const setStat=(id,s)=>updateDoc(doc(db,"orders",id),{status:s,timestamp:serverTimestamp()});
+const del=id=>confirm("Delete?")&&deleteDoc(doc(db,"orders",id));
+
+/* SEARCH + HIGHLIGHT */
+function highlightOrder(code){
+  const el=document.getElementById("order-"+code);
+  if(el){
+    if(highlighted)highlighted.classList.remove("highlight");
+    highlighted=el; el.classList.add("highlight");
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+  }
+}
+findBtn.onclick=()=>{ const c=searchCode.value.trim(); if(c) highlightOrder(c); };
+document.body.addEventListener("click",e=>{
+  if(highlighted&&!e.target.closest(".order-card")){
+    highlighted.classList.remove("highlight"); highlighted=null;
+  }
+});
+
+/* PAYMENT FLOW */
+window.openPayment=(order,amt)=>{
+  currentPayOrder=order;
+  amountText.innerText="Amount: ₹"+amt;
+  qrImage.style.display="none";
+  payOptions.style.display="flex";
+  paymentModal.style.display="flex";
+};
+
+cashBtn.onclick=async()=>{
+  if(!currentPayOrder) return;
+  await updateDoc(doc(db,"orders",currentPayOrder.id),{
+    paymentMode:"cash",
+    paymentAt:serverTimestamp()
+  });
+  closePayment();
+};
+
+onlineBtn.onclick=async()=>{
+  if(!currentPayOrder) return;
+  await updateDoc(doc(db,"orders",currentPayOrder.id),{
+    paymentMode:"online",
+    paymentAt:serverTimestamp()
+  });
+
+  const upi="Q099759199@ybl";
+  const link=`upi://pay?pa=${upi}&pn=Canteen&am=${currentPayOrder.totalAmount||""}&cu=INR&tn=${currentPayOrder.orderCode}`;
+  qrImage.src=`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
+  payOptions.style.display="none";
+  qrImage.style.display="block";
+};
+
+window.closePayment=()=>{
+  paymentModal.style.display="none";
+  currentPayOrder=null;
+};
+
+/* SCANNER */
+let scanner;
+window.openScanner=()=>{
+  scannerModal.style.display="flex";
+  scanner=new Html5QrcodeScanner("qr-reader",{fps:10,qrbox:250,facingMode:{exact:"environment"}},false);
+  scanner.render(text=>{
+    searchCode.value=text;
+    closeScanner();
+    highlightOrder(text);
+  },()=>{});
+};
+window.closeScanner=()=>{try{scanner.clear()}catch{} scannerModal.style.display="none"};
+</script>
+</body>
+</html>

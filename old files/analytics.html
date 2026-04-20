@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Analytics Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #46a0fa;
+      --price: #d22c27;
+      --success: #1ee725;
+      --danger: #f72585;
+      --warning: #f8961e;
+      --info: #4895ef;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --accent: #FFD166;
+      --background: #F7FFF7;
+      --card-bg: #FFFFFF;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body { 
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #e1e3e4;
+      color: #334155;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header matching Admin Dashboard */
+    header {
+      display: flex;
+      justify-content: center;
+      background: var(--primary);
+      color: white;
+      padding: 16px 20px;
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 101;
+      box-shadow: var(--shadow);
+    }
+
+    .logout-container {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+    }
+
+    #logoutBtn {
+      background: #d22c27;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    #logoutBtn:hover { background: #a71d2a; }
+
+    /* Navigation matching Admin Dashboard */
+    .admin-nav {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 74px; /* Sits below the header */
+      z-index: 100;
+    }
+
+    /* Adjust top position for mobile if header height changes */
+    @media (max-width: 768px) {
+      header {
+        font-size: 1.4rem;
+        padding: 12px 16px;
+      }
+      .admin-nav {
+        top: 53px;
+      }
+    }
+
+    .nav-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+    }
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .nav-links {
+      list-style: none;
+      display: flex;
+      gap: 18px;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .nav-links a.active {
+      color: #FFD166;
+      font-weight: 700;
+    }
+
+    .nav-toggle {
+      display: none;
+      font-size: 1.4rem;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        position: absolute;
+        top: 50px;
+        right: 0;
+        background: var(--primary);
+        flex-direction: column;
+        width: 200px;
+        padding: 10px;
+        display: none;
+      }
+      .nav-links.show {
+        display: flex;
+      }
+      .nav-toggle {
+        display: block;
+      }
+    }
+
+    /* Charts Content */
+    .charts-container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      max-width: 1400px;
+      margin: 0 auto;
+      flex: 1;
+    }
+    
+    .chart-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 25px;
+    }
+    
+    .card { 
+      background: white; 
+      padding: 25px; 
+      border-radius: 12px; 
+      box-shadow: var(--shadow);
+      transition: transform 0.2s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: var(--dark);
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    
+    canvas { 
+      width: 100% !important; 
+      height: 300px !important;
+    }
+    
+    @media (max-width: 1024px) {
+      .chart-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+</head>
+<body>
+  <script type="module" src="auth-guard.js"></script>
+
+  <header>
+    Analytics
+    <div class="logout-container">
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <nav class="admin-nav">
+    <div class="nav-container">
+      <div class="nav-logo">P.E.S. Canteen — Admin</div>
+      <button class="nav-toggle" id="navToggle">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="admin-dashboard.html">Dashboard</a></li>
+        <li><a href="analytics.html">Analytics</a></li>
+        <li><a href="expense.html">Expenses</a></li>
+        <li><a href="staff-managment.html">Staff</a></li>
+      </ul>
+    </div>
+  </nav>
+  
+  <div class="charts-container">
+    <div class="chart-row">
+      <div class="card">
+        <h3>Daily Orders (Last 7 Days)</h3>
+        <canvas id="dailyOrdersChart"></canvas>
+      </div>
+      <div class="card">
+        <h3>Revenue Trend (Last 7 Days)</h3>
+        <canvas id="revenueTrendChart"></canvas>
+      </div>
+    </div>
+    
+    <div class="chart-row">
+      <div class="card">
+        <h3>Popular Items</h3>
+        <canvas id="popularItemsChart"></canvas>
+      </div>
+      <div class="card">
+        <h3>Monthly Revenue (Last 6 Months)</h3>
+        <canvas id="monthlyRevenueChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toggle mobile nav
+    document.getElementById("navToggle").onclick = () => {
+      document.getElementById("navLinks").classList.toggle("show");
+    };
+
+    // Highlight current page
+    const links = document.querySelectorAll(".nav-links a");
+    links.forEach(link => {
+      if (link.href === window.location.href || link.href.includes("analytics.html")) {
+        link.classList.add("active");
+      }
+    });
+  </script>
+
+  <script type="module">
+    import { db, auth } from "./firebase-config.js";
+    import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    // Logout Functionality
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        window.location.href = "login.html";
+      } catch (err) {
+        console.error("Logout error:", err);
+        alert("Error logging out.");
+      }
+    });
+
+    // === Helper functions ===
+    function createGradient(ctx, color1, color2) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, color1);
+      gradient.addColorStop(1, color2);
+      return gradient;
+    }
+    function formatDisplayDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+    }
+    function formatDisplayMonth(monthStr) {
+      const [year, month] = monthStr.split("-");
+      return new Date(year, month-1).toLocaleDateString("en-US",{month:"short",year:"numeric"});
+    }
+    function formatMonth(date) {
+      if (!date) return null;
+      const d = new Date(date);
+      return isNaN(d.getTime()) ? null : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    }
+    function generateColors(count) {
+      const baseColors = [
+        "rgba(67, 97, 238, 0.8)", "rgba(76, 201, 240, 0.8)", "rgba(248, 150, 30, 0.8)",
+        "rgba(243, 104, 224, 0.8)", "rgba(72, 149, 239, 0.8)", "rgba(106, 176, 76, 0.8)", "rgba(247, 37, 133, 0.8)"
+      ];
+      return Array.from({length: count}, (_, i) => baseColors[i % baseColors.length]);
+    }
+
+    // === Chart initializations ===
+    const dailyOrdersCtx = document.getElementById("dailyOrdersChart").getContext("2d");
+    const dailyOrdersChart = new Chart(dailyOrdersCtx, {
+      type: "bar",
+      data: { labels: [], datasets: [{ label: "Orders", data: [], backgroundColor: createGradient(dailyOrdersCtx,"rgba(67, 97, 238, 0.8)","rgba(63, 55, 201, 0.8)"), borderColor:"rgba(67, 97, 238, 1)", borderWidth:1, borderRadius:6, borderSkipped:false }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{backgroundColor:"rgba(0,0,0,0.8)", padding:12}}, scales:{ y:{beginAtZero:true}, x:{} } },
+      plugins: [ChartDataLabels]
+    });
+
+    const popularItemsCtx = document.getElementById("popularItemsChart").getContext("2d");
+    const popularItemsChart = new Chart(popularItemsCtx, {
+      type: "doughnut",
+      data: { labels: [], datasets: [{ label:"Items Sold", data:[], backgroundColor:[], borderWidth:0, hoverOffset:10 }] },
+      options: { responsive:true, maintainAspectRatio:false, cutout:"70%", plugins:{ legend:{position:"right"}, datalabels:{color:"#fff"} } },
+      plugins: [ChartDataLabels]
+    });
+
+    const revenueTrendCtx = document.getElementById("revenueTrendChart").getContext("2d");
+    const revenueTrendChart = new Chart(revenueTrendCtx, {
+      type: "line",
+      data: { labels: [], datasets: [{ label:"Revenue ₹", data:[], borderColor:"rgba(76, 201, 240, 1)", backgroundColor:createGradient(revenueTrendCtx,"rgba(76, 201, 240, 0.2)","rgba(76, 201, 240, 0)"), borderWidth:3, tension:0.4, fill:true }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}} }
+    });
+
+    const monthlyRevenueCtx = document.getElementById("monthlyRevenueChart").getContext("2d");
+    const monthlyRevenueChart = new Chart(monthlyRevenueCtx, {
+      type: "bar",
+      data: { labels: [], datasets: [{ label:"Revenue ₹", data:[], backgroundColor:createGradient(monthlyRevenueCtx,"rgba(248, 150, 30, 0.8)","rgba(245, 158, 11, 0.8)"), borderWidth:1, borderRadius:6 }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}} }
+    });
+
+    // === Firestore listener ===
+    onSnapshot(collection(db, "orders"), (snapshot) => {
+      const allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const dailyOrdersMap = {};
+      const revenueMap = {};
+      const itemCounts = {};
+      const monthlyRevenueMap = {};
+      const today = new Date();
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        dailyOrdersMap[dateStr] = 0;
+        revenueMap[dateStr] = 0;
+      }
+
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+        monthlyRevenueMap[monthStr] = 0;
+      }
+
+      allOrders.forEach(order => {
+        const orderDate = order.date ? new Date(order.date).toISOString().split("T")[0] : null;
+        const monthStr = order.date ? formatMonth(order.date) : null;
+        const total = order.totalAmount || (order.items?.reduce((s,i)=> s + ((i.price||0)*(i.quantity||1)),0) || 0);
+
+        if (orderDate && dailyOrdersMap.hasOwnProperty(orderDate)) {
+          dailyOrdersMap[orderDate] += 1;
+          if (order.status === "completed") revenueMap[orderDate] += total;
+        }
+        if (monthStr && monthlyRevenueMap.hasOwnProperty(monthStr) && order.status === "completed") {
+          monthlyRevenueMap[monthStr] += total;
+        }
+        if (order.items) {
+          order.items.forEach(item => {
+            if (!itemCounts[item.name]) itemCounts[item.name] = 0;
+            itemCounts[item.name] += item.quantity || 1;
+          });
+        }
+      });
+
+      dailyOrdersChart.data.labels = Object.keys(dailyOrdersMap).map(formatDisplayDate);
+      dailyOrdersChart.data.datasets[0].data = Object.values(dailyOrdersMap);
+      dailyOrdersChart.update();
+
+      revenueTrendChart.data.labels = Object.keys(dailyOrdersMap).map(formatDisplayDate);
+      revenueTrendChart.data.datasets[0].data = Object.values(revenueMap);
+      revenueTrendChart.update();
+
+      const items = Object.keys(itemCounts);
+      popularItemsChart.data.labels = items;
+      popularItemsChart.data.datasets[0].data = items.map(i => itemCounts[i]);
+      popularItemsChart.data.datasets[0].backgroundColor = generateColors(items.length);
+      popularItemsChart.update();
+
+      monthlyRevenueChart.data.labels = Object.keys(monthlyRevenueMap).map(formatDisplayMonth);
+      monthlyRevenueChart.data.datasets[0].data = Object.values(monthlyRevenueMap);
+      monthlyRevenueChart.update();
+    });
+  </script>
+</body>
+</html>

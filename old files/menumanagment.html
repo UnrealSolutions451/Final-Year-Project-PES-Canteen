@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Menu Availability</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #46a0fa;
+      --price: #d22c27;
+      --buttons: #46a0fa;
+      --accent: #FFD166;
+      --background: #F7FFF7;
+      --text: #2b2c2d;
+      --card-bg: #FFFFFF;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background:#03045e;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.75rem;
+      font-weight: bold;
+      align-content: center;
+      height: 60px;
+      position: relative;
+    }
+    main {
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    }
+    .item-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #28a745;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    .logout-container {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+    }
+    #logoutBtn {
+      background: #d22c27;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+  .admin-nav {
+    background: var(--primary, #03045e);
+    color: white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+  }
+  .nav-logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 18px;
+  }
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+  .nav-links a:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  .nav-links a.active {
+    /* background: var(--accent, #FFD166); */
+    color: #FFD166;
+    font-weight: 700;
+  }
+  /* Mobile */
+  .nav-toggle {
+    display: none;
+    font-size: 1.4rem;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+  }
+  @media (max-width: 768px) {
+    .nav-links {
+      position: absolute;
+      top: 56px;
+      right: 0;
+      background: var(--primary, #03045e);
+      flex-direction: column;
+      width: 200px;
+      padding: 10px;
+      display: none;
+    }
+    .nav-links.show {
+      display: flex;
+    }
+    .nav-toggle {
+      display: block;
+    }
+  }
+    .search-container {
+      display: flex;
+      justify-content: right;
+      padding: 10px;
+      background: white;
+      gap: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .search-input {
+      width: 100%;
+      max-width: 500px;
+      padding: 10px 14px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(3,4,94,0.15);
+    }
+  </style>
+</head>
+
+<body>
+<script type="module" src="auth-guard.js"></script>
+
+<header>
+  Menu Availability
+  <div class="logout-container">
+    <button id="logoutBtn">⏻</button>
+  </div>
+</header>
+
+<nav class="admin-nav">
+  <div class="nav-container">
+    <div class="nav-logo"></div>
+
+    <button class="nav-toggle" id="navToggle">☰</button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="canteen.html">Canteen Panel</a></li>
+      <li><a href="menumanagment.html">Menu</a></li>
+      <li><a href="AddMenu.html">Add/Edit Menu</a></li>
+      <li><a href="staff-attendance.html">Staff Attendance</a></li>
+      <li><a href="KOT.html">KOT</a></li>
+      <li><a href="Ready.html">Ready Screen</a></li>
+      
+    </ul>
+  </div>
+</nav>
+<div class="search-container">
+  <input type="text" id="searchInput" class="search-input" placeholder="Search for items...">
+</div>
+
+<main>
+  <div id="menuList">Loading menu items...</div>
+</main>
+
+<script type="module">
+  import { db } from "./firebase-config.js";
+  import { collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+  const menuList = document.getElementById("menuList");
+  const searchInput = document.getElementById("searchInput");
+  const auth = getAuth();
+
+  let allItems = [];   // ✅ store all menu items here
+
+  // Logout
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    try {
+      const currentPage = encodeURIComponent(window.location.pathname);
+      await signOut(auth);
+      window.location.href = `loginMain.html?redirect=${currentPage}`;
+    } catch (err) {
+      console.error("Logout error:", err);
+      alert("Error logging out. Please try again.");
+    }
+  });
+
+  // Render list
+  function renderList(items) {
+    menuList.innerHTML = "";
+
+    if (!items.length) {
+      menuList.innerHTML = "<p>No items found.</p>";
+      return;
+    }
+
+    items.forEach(({ id, data }) => {
+      const available = data.available === true;
+
+      const itemDiv = document.createElement("div");
+      itemDiv.className = "item";
+
+      itemDiv.innerHTML = `
+        <span class="item-name">${data.name || "Unnamed Item"}</span>
+        <label class="switch">
+          <input type="checkbox" ${available ? "checked" : ""} data-id="${id}">
+          <span class="slider"></span>
+        </label>
+      `;
+
+      menuList.appendChild(itemDiv);
+    });
+
+    // Toggle handlers
+    document.querySelectorAll(".switch input").forEach((input) => {
+      input.addEventListener("change", async (e) => {
+        const id = e.target.dataset.id;
+        const isAvailable = e.target.checked;
+        try {
+          await updateDoc(doc(db, "menu", id), { available: isAvailable });
+        } catch (err) {
+          console.error("Update error:", err);
+        }
+      });
+    });
+  }
+
+  // Search filter
+  function applySearch() {
+    const q = searchInput.value.trim().toLowerCase();
+    const filtered = allItems.filter(i =>
+      (i.data.name || "").toLowerCase().includes(q)
+    );
+    renderList(filtered);
+  }
+
+  searchInput.addEventListener("input", applySearch);
+
+  // Realtime Firestore
+  onSnapshot(collection(db, "menu"), (snapshot) => {
+    allItems = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+    applySearch(); // ✅ keep search active on realtime updates
+  });
+</script>
+</body>
+</html>

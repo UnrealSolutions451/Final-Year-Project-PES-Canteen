@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - P.E.S. Canteen</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #03045e, #46a0fa);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+    .login-card h2 {
+      margin-bottom: 20px;
+      color: #03045e;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #46a0fa;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .error {
+      color: red;
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h2>🔐 Staff Login</h2>
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button id="loginBtn">Login</button>
+    <p id="errorMsg" class="error"></p>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+   document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const errorMsg = document.getElementById("errorMsg");
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+
+    // ✅ Check redirect param
+    const params = new URLSearchParams(window.location.search);
+    const redirectPage = params.get("redirect") || "canteen.html";
+
+    window.location.href = redirectPage;
+  } catch (err) {
+    errorMsg.textContent = "❌ " + err.message;
+  }
+});
+
+  </script>
+</body>
+</html>

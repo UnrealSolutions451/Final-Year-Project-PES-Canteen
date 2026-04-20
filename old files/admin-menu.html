@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - Add Menu Item</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+    h1, h2 { margin-bottom: 15px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 5px;
+    }
+    button {
+      background: #4361ee;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 16px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    button[disabled] { opacity: 0.6; cursor: not-allowed; }
+    #preview { max-width: 200px; max-height: 200px; margin-top: 10px; border-radius: 4px; display: none; }
+    #status { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
+    .success { background: #d4edda; color: #155724; display: block; }
+    .error   { background: #f8d7da; color: #721c24; display: block; }
+    .info    { background: #e2e3e5; color: #383d41; display: block; }
+    #loginForm, #addItemForm { border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Admin Panel</h1>
+
+  <!-- Login Form -->
+  <div id="loginForm">
+    <h2>Login</h2>
+    <div class="form-group">
+      <label for="loginEmail">Email:</label>
+      <input type="email" id="loginEmail" required>
+    </div>
+    <div class="form-group">
+      <label for="loginPassword">Password:</label>
+      <input type="password" id="loginPassword" required>
+    </div>
+    <button id="loginBtn">Login</button>
+  </div>
+
+  <!-- Add Menu Form (hidden until login) -->
+  <div id="addItemForm" style="display:none;">
+    <h2>Add Menu Item</h2>
+    <div class="form-group">
+      <label for="itemName">Name:</label>
+      <input type="text" id="itemName" required placeholder="Cheeseburger">
+    </div>
+    <div class="form-group">
+      <label for="itemPrice">Price (₹):</label>
+      <input type="number" id="itemPrice" required placeholder="199" min="0" step="1">
+    </div>
+    <div class="form-group">
+      <label for="itemCategory">Category:</label>
+      <select id="itemCategory">
+        <option value="burgers">Burgers</option>
+        <option value="pizza">Pizza</option>
+        <option value="drinks">Drinks</option>
+        <option value="sides">Sides</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="itemDescription">Description (optional):</label>
+      <textarea id="itemDescription" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="itemImage">Image:</label>
+      <input type="file" id="itemImage" accept="image/*" required>
+      <img id="preview" alt="Preview">
+    </div>
+    <button id="addItemBtn">Add Menu Item</button>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    function setStatus(msg, type="info") {
+      statusEl.textContent = msg;
+      statusEl.className = type;
+      statusEl.style.display = "block";
+      console.log("[STATUS]", msg); // debug log
+    }
+
+    // ---- Login Handler ----
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (!email || !password) {
+        setStatus("Please enter email and password.", "error");
+        return;
+      }
+
+      try {
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+        setStatus("Login successful.", "success");
+      } catch (e) {
+        console.error("Login error:", e);
+        setStatus("Login failed: " + e.message, "error");
+      }
+    });
+
+    // Auth state listener
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        console.log("Logged in as", user.email);
+        document.getElementById('loginForm').style.display = "none";
+        document.getElementById('addItemForm').style.display = "block";
+      } else {
+        console.log("Not logged in");
+        document.getElementById('loginForm').style.display = "block";
+        document.getElementById('addItemForm').style.display = "none";
+      }
+    });
+
+    // ---- Add Menu Item Handler ----
+    async function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('addItemBtn').addEventListener('click', async () => {
+      const name = document.getElementById('itemName').value.trim();
+      const price = parseFloat(document.getElementById('itemPrice').value);
+      const category = document.getElementById('itemCategory').value;
+      const description = document.getElementById('itemDescription').value.trim();
+      const imageFile = document.getElementById('itemImage').files[0];
+
+      if (!name || isNaN(price) || !imageFile) {
+        setStatus("Please fill all required fields.", "error");
+        return;
+      }
+
+      try {
+        const image = await fileToDataURL(imageFile);
+        const itemId = "item-" + Date.now();
+
+        const menuItem = {
+          id: itemId,
+          name,
+          price,
+          category,
+          description: description || '',
+          image,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection('menu').doc(itemId).set(menuItem);
+
+        setStatus(`${name} added successfully!`, "success");
+
+        // Reset
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemPrice').value = '';
+        document.getElementById('itemDescription').value = '';
+        document.getElementById('itemImage').value = '';
+        document.getElementById('preview').style.display = 'none';
+      } catch (e) {
+        console.error("Add item error:", e);
+        setStatus("Error: " + e.message, "error");
+      }
+    });
+
+    // Preview
+    document.getElementById('itemImage').addEventListener('change', e => {
+      const f = e.target.files[0];
+      const preview = document.getElementById('preview');
+      if (f) {
+        preview.src = URL.createObjectURL(f);
+        preview.style.display = "block";
+      } else {
+        preview.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>

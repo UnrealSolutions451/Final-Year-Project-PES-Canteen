@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PES Canteen | Checkout</title>
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #000000;
+      --price: #d22c27;
+      --buttons: #46a0fa;
+      --accent: #FB8D22;
+      --background: #F7FFF7;
+      --text: #292F36;
+      --card-bg: #FFFFFF;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+      --transition: all 0.3s ease;
+    }
+
+    body {
+      font-family: "Poppins", sans-serif;
+      background: var(--background);
+      margin: 0;
+      padding: 0;
+      color: var(--secondary);
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-bottom: 1rem;
+      border-bottom: 2px solid var(--primary);
+      display: inline-block;
+      padding-bottom: 4px;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 1rem 0;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .cart-item:last-child {
+      border-bottom: none;
+    }
+
+    .cart-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .item-details {
+      flex: 1;
+      margin-left: 1rem;
+    }
+
+    .item-details h4 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .item-details p {
+      margin: 4px 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    .item-price {
+      font-weight: 600;
+      color: black;
+    }
+
+    .total-section {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-top: 2px dashed #ccc;
+      padding-top: 1rem;
+    }
+
+    .tp {
+      color: var(--price);
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      font-size: 1.1rem;
+      border: none;
+      padding: 0.9rem;
+      border-radius: 10px;
+      margin-top: 2rem;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: var(--buttons);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .site-footer {
+      background: #03045e;
+      color: #fff;
+      text-align: center;
+      padding: 15px 10px;
+      font-size: 14px;
+      margin-top: 30px;
+    }
+
+    .site-footer a {
+      color: #FFD166;
+      text-decoration: none;
+      margin: 0 6px;
+      font-weight: 500;
+    }
+
+    .site-footer a:hover {
+      text-decoration: underline;
+    }
+
+    .site-footer .copy {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #ddd;
+    }
+
+    @media (max-width: 600px) {
+      .cart-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .item-details {
+        margin: 0.5rem 0;
+      }
+
+      .total-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .tp {
+        color: var(--price);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>PES Canteen Checkout</header>
+
+  <div class="container">
+    <h2>Your Order</h2>
+
+    <div id="cart-items"></div>
+
+    <div class="total-section">
+      <span>Total:</span>
+      <span class="tp" id="total-amount">₹0</span>
+    </div>
+
+    <button id="payBtn">Proceed to Pay</button>
+  </div>
+
+  <footer class="site-footer">
+    <p>
+      <a href="T&C.html">Terms & Conditions</a> |
+      <a href="P&P.html">Privacy Policy</a> |
+      <a href="R&R.html">Return & Refund Policy</a> |
+      <a href="about.html">About Us</a>
+    </p>
+    <p class="copy">&copy; 2025 P.E.S. Canteen. All rights reserved.</p>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQFOv3uq9uviBQOjJAdgSni1uyikGPgbo",
+      authDomain: "pes-canteen.firebaseapp.com",
+      projectId: "pes-canteen",
+      storageBucket: "pes-canteen.firebasestorage.app",
+      messagingSenderId: "398702472399",
+      appId: "1:398702472399:web:626587a3b358bd55075bba",
+      measurementId: "G-LL28HG6PDB"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Get session & table data
+    const params = new URLSearchParams(window.location.search);
+    const tableId = params.get("table") || "default";
+    const sessionId = params.get("session");
+    const CART_KEY = `cart_${tableId}_${sessionId}`;
+
+    const sessionData = JSON.parse(localStorage.getItem("canteenSession") || "{}");
+    const now = Date.now();
+
+    if (!sessionId || !sessionData.sessionId || sessionId !== sessionData.sessionId || now > sessionData.expiry) {
+      window.location.href = `landing.html?table=${tableId}`;
+    }
+
+    const cartContainer = document.getElementById("cart-items");
+    const totalAmountEl = document.getElementById("total-amount");
+    const payBtn = document.getElementById("payBtn");
+
+    // Load cart from current session
+    let cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
+
+    if (cart.length === 0) {
+      cartContainer.innerHTML = "<p>Your cart is empty.</p>";
+      payBtn.disabled = true;
+      payBtn.style.opacity = "0.6";
+      totalAmountEl.textContent = "₹0";
+    } else {
+      renderCart();
+    }
+
+    function renderCart() {
+      let total = 0;
+      cartContainer.innerHTML = "";
+
+      cart.forEach((item) => {
+        const qty = item.quantity || 1;
+        const subtotal = item.price * qty;
+        total += subtotal;
+
+        const div = document.createElement("div");
+        div.classList.add("cart-item");
+        div.innerHTML = `
+          <img src="${item.img || "https://via.placeholder.com/60"}" alt="${item.name}">
+          <div class="item-details">
+            <h4>${item.name}</h4>
+            <p>Qty: ${qty}</p>
+          </div>
+          <span class="item-price">₹${subtotal}</span>
+        `;
+        cartContainer.appendChild(div);
+      });
+
+      totalAmountEl.textContent = "₹" + total;
+    }
+
+    // ==============================
+    // 🚀 PHONEPE PAYMENT INTEGRATION
+    // ==============================
+    payBtn.addEventListener("click", async () => {
+      if (cart.length === 0) {
+        alert("Your cart is empty!");
+        return;
+      }
+
+      const orderPayload = {
+        table: tableId,
+        sessionId: sessionId,
+        items: cart,
+        total: cart.reduce((sum, i) => sum + i.price * (i.quantity || 1), 0),
+        currency: "INR"
+      };
+
+      payBtn.disabled = true;
+      payBtn.textContent = "Redirecting...";
+
+      try {
+        // ⚠️ Change URL when deployed (e.g. https://your-backend.onrender.com/api/create-order)
+        const res = await fetch("https://pesbackend.onrender.com/api/create-order", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(orderPayload)
+});
+
+
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Order creation failed");
+
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+        } else {
+          alert("No checkout URL returned from server.");
+          payBtn.disabled = false;
+          payBtn.textContent = "Proceed to Pay";
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Payment initiation failed: " + err.message);
+        payBtn.disabled = false;
+        payBtn.textContent = "Proceed to Pay";
+      }
+    });
+  </script>
+</body>
+</html>

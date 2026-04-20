@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ready Orders - Pickup Screen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --primary: #03045e;
+      --card-bg: #fff;
+      --shadow: 0 4px 10px rgba(0,0,0,0.1);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin:0; padding:0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    body {
+      background: linear-gradient(135deg, #03045e, #46a0fa);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 2.7rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .orders-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px,1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .order-card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .order-code {
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--primary);
+    }
+
+    .order-info {
+      font-size: 1.2rem;
+      color: #444;
+    }
+
+    .empty {
+      margin-top: 50px;
+      font-size: 1.5rem;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Orders Ready for Pickup</h1>
+</header>
+
+<main>
+  <div id="orders" class="orders-grid"></div>
+  <div id="emptyMsg" class="empty" style="display:none;">No orders ready right now.</div>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getFirestore, collection, query, where, onSnapshot } 
+    from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const ordersDiv = document.getElementById("orders");
+  const emptyMsg = document.getElementById("emptyMsg");
+
+  const bellAudio = new Audio("./bell.mp3");
+  bellAudio.preload = "auto";
+
+  speechSynthesis.onvoiceschanged = () => {};
+
+  function speak(text) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-IN";
+    u.rate = 0.9;
+    u.pitch = 1.1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }
+
+  // 🔢 Digit helpers
+  function speakDigits(value) {
+    if (!value) return "unknown";
+    return String(value).replace(/\D/g, "").split("");
+  }
+
+  function buildReadySpeech(order) {
+    return `Table number ${speakDigits(order.table)}. Order number ${speakDigits(order.orderCode)} is ready. `;
+  }
+
+  const announced = new Set();
+
+  const q = query(collection(db, "orders"), where("status", "==", "ready"));
+
+  onSnapshot(q, snapshot => {
+    const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    orders.sort((a,b) =>
+      (a.readyAt?.toMillis?.() ?? 0) - (b.readyAt?.toMillis?.() ?? 0)
+    );
+
+    for (const order of orders) {
+      if (!announced.has(order.id)) {
+        announced.add(order.id);
+        bellAudio.play().catch(()=>{});
+        setTimeout(() => speak(buildReadySpeech(order)), 700);
+      }
+    }
+
+    render(orders);
+  });
+
+  function render(orders) {
+    ordersDiv.innerHTML = "";
+    emptyMsg.style.display = orders.length ? "none" : "block";
+
+    orders.forEach(o => {
+      const div = document.createElement("div");
+      div.className = "order-card";
+      div.innerHTML = `
+        <div class="order-code">${o.orderCode}</div>
+        <div class="order-info">Table: ${o.table}</div>
+      `;
+      ordersDiv.appendChild(div);
+    });
+  }
+
+  document.body.addEventListener("click", () => {
+    bellAudio.play().catch(()=>{});
+  }, { once:true });
+</script>
+
+</body>
+</html>

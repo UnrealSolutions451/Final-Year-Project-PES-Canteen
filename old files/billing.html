@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Canteen Billing Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- QR Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #46a0fa;
+      --price: #d22c27;
+      --buttons: #46a0fa;
+      --background: #F7FFF7;
+      --text: #292F36;
+      --card-bg: #FFFFFF;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+      --transition: all .3s ease;
+    }
+
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui}
+
+    body{
+      background:var(--background);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    header{
+      background:var(--primary);
+      color:white;
+      height:90px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      box-shadow:var(--shadow)
+    }
+
+    .logo{position:absolute;left:20px;max-height:70px}
+    main{padding:16px;max-width:1100px;margin:auto;width:100%}
+    .row{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap}
+    .input{
+      flex:1;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff
+    }
+    .btn{
+      padding:10px 16px;border:none;border-radius:10px;font-weight:600;
+      cursor:pointer;transition:.2s;box-shadow:var(--shadow)
+    }
+
+    .btn-primary{background:var(--primary);color:white}
+    .btn-scan{background:#1f7ae0;color:white}
+    .btn-danger{background:#ff6a00;color:white}
+    .btn-ghost{background:white;border:1px solid #ddd}
+    .btn-pay{background:#1a8f3d;color:white}
+
+    h2{text-align:center;margin:10px 0 14px}
+
+    .orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+    .order-card{
+      background:white;border-radius:12px;padding:16px;box-shadow:var(--shadow)
+    }
+
+    .order-head{display:flex;justify-content:space-between}
+    .status{padding:6px 10px;border-radius:20px;font-size:.8rem;font-weight:700}
+    .status.pending{background:#ffe3e3}
+    .status.accepted{background:#fff8c5}
+    .status.ready{background:#d3ffd3}
+    .status.completed{background:#cfe5ff}
+
+    .order-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .order-actions .btn{flex:1}
+
+    .logout-container{position:absolute;right:20px;top:25px}
+    #logoutBtn{
+      background:#d22c27;color:white;padding:8px 16px;border-radius:20px;border:none;
+    }
+
+    .payment-modal, .scanner-modal{
+      position:fixed;inset:0;background:rgba(0,0,0,.7);
+      display:none;align-items:center;justify-content:center;z-index:1000;
+    }
+
+    .payment-box, .scanner-box{
+      background:white;padding:20px;border-radius:14px;
+      width:95%;max-width:400px;text-align:center
+    }
+
+    .payment-box img{width:230px;height:230px;margin-top:10px}
+
+    .closePay, .closeScan{
+      margin-top:12px;padding:8px 14px;border-radius:8px;border:none;
+      background:#d22c27;color:white;font-weight:700
+    }
+
+    #qr-reader {width:100%}
+
+    @media(max-width:720px){
+      .row{flex-direction:column}
+      .btn{width:100%}
+    }
+  </style>
+</head>
+
+<body>
+
+<script type="module" src="auth-guard.js"></script>
+
+<header>
+  <img src="Pes_logo.png" class="logo">
+  <h1>P.E.S. Billing Panel</h1>
+
+  <div class="logout-container">
+    <button id="logoutBtn">Logout</button>
+  </div>
+</header>
+
+<main>
+  <div class="row">
+    <input id="orderCode" class="input" placeholder="Enter Order Code">
+    <button class="btn btn-primary" id="findBtn">Find</button>
+    <button class="btn btn-scan" onclick="openScanner()">Scan</button>
+  </div>
+
+  <h2>Pending Orders Only</h2>
+  <div class="orders-grid" id="orders"></div>
+</main>
+
+
+<!-- PAYMENT MODAL -->
+<div class="payment-modal" id="paymentModal">
+  <div class="payment-box">
+    <h3>Scan & Pay</h3>
+    <p id="amountText"></p>
+    <img id="qrImage">
+    <button class="closePay" onclick="document.getElementById('paymentModal').style.display='none'">
+      Close
+    </button>
+  </div>
+</div>
+
+
+<!-- SCANNER MODAL -->
+<div class="scanner-modal" id="scannerModal">
+  <div class="scanner-box">
+    <h3>Scan Order Code</h3>
+    <div id="qr-reader"></div>
+    <button class="closeScan" onclick="closeScanner()">Close</button>
+  </div>
+</div>
+
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  getFirestore, collection, query, where, getDocs,
+  doc, updateDoc, deleteDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await signOut(auth);
+  window.location.href="login.html";
+};
+
+const ordersDiv = document.getElementById("orders");
+const findBtn = document.getElementById("findBtn");
+
+
+/* -------------------- PAYMENT QR -------------------- */
+function openPayment(amount, orderId){
+  const upiId = "7507374446-ippb@ybl";
+  const link = `upi://pay?pa=${upiId}&pn=Canteen&am=${amount}&cu=INR&tn=${orderId}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
+
+  document.getElementById("qrImage").src = qrUrl;
+  document.getElementById("amountText").innerText = "Amount: ₹" + amount;
+  document.getElementById("paymentModal").style.display="flex";
+}
+window.openPayment = openPayment;
+
+
+/* -------------------- FIND ONLY PENDING ORDER -------------------- */
+async function findOrder(){
+  const code = document.getElementById("orderCode").value.trim();
+  if(!code){ alert("Enter order code"); return; }
+
+  const q = query(
+    collection(db,"orders"),
+    where("orderCode","==",code),
+    where("status","==","pending")
+  );
+
+  const snap = await getDocs(q);
+  ordersDiv.innerHTML = "";
+
+  snap.forEach(d =>{
+    const order = d.data();
+    order.id = d.id;
+
+    const items = order.items || [];
+    let total = 0;
+    let itemText = [];
+
+    items.forEach(i=>{
+      const price = Number(i.price || 0);
+      const qty = Number(i.quantity || 1);
+      total += price * qty;
+      itemText.push(`${i.name} x ${qty} (₹${price})`);
+    });
+
+    ordersDiv.innerHTML += `
+      <div class="order-card">
+        <div class="order-head">
+          <strong>Order: ${order.orderCode}</strong>
+          <span class="status ${order.status}">${order.status}</span>
+        </div>
+
+        <p><b>Items:</b> ${itemText.join(", ") || "No items"}</p>
+        <p><b>Total:</b> ₹${total}</p>
+
+        <div class="order-actions">
+          <button class="btn btn-primary" onclick="updateStat('${order.id}','accepted')">Accept</button>
+          <button class="btn btn-pay" onclick="openPayment(${total},'${order.orderCode}')">Payment</button>
+          <button class="btn btn-danger" onclick="deleteOrder('${order.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+async function updateStatus(id,status){
+  await updateDoc(doc(db,"orders",id),{status,timestamp:serverTimestamp()});
+  alert("Status Updated");
+  findOrder();
+}
+
+async function deleteOrderFn(id){
+  if(confirm("Delete Order?")){
+    await deleteDoc(doc(db,"orders",id));
+    alert("Order Deleted");
+    ordersDiv.innerHTML="";
+  }
+}
+
+window.updateStat = updateStatus;
+window.deleteOrder = deleteOrderFn;
+findBtn.onclick = findOrder;
+
+
+/* -------------------- QR SCANNER -------------------- */
+let scanner;
+
+window.openScanner = function(){
+  document.getElementById("scannerModal").style.display="flex";
+
+  scanner = new Html5QrcodeScanner(
+      "qr-reader",
+      { fps: 10, qrbox: 300 },
+      false
+  );
+
+  scanner.render(onScanSuccess, () => {});
+}
+
+function onScanSuccess(result){
+  const match = result.match(/ORD-\w+/);
+  if(match){
+    document.getElementById("orderCode").value = match[0];
+    alert("Order Detected: " + match[0]);
+    closeScanner();
+    findOrder();
+  }
+}
+
+window.closeScanner = function(){
+  try{ scanner.clear(); }catch(e){}
+  document.getElementById("scannerModal").style.display="none";
+}
+
+</script>
+</body>
+</html>

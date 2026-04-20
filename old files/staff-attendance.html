@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Staff Attendance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+:root{
+  --primary:#03045e;
+  --present:#28a745;
+  --absent:#d22c27;
+  --not:#f6c344;
+  --bg:#efefef;
+  --card:#fff;
+  --radius:12px;
+  --shadow:0 6px 18px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;font-family:Segoe UI,system-ui,sans-serif}
+body{background:var(--bg);padding:0; margin:0;}
+
+header{
+  background:var(--primary);
+  color:#fff;
+  padding:16px;
+  font-weight:800;
+  text-align:center;
+  font-size: 1.5rem;
+  position: relative;
+}
+
+.logout-container { position: absolute; top: 14px; right: 10px; }
+#logoutBtn {
+  background: #d22c27; color: white; border: none; padding: 8px 16px;
+  border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold;
+}
+
+/* SYNCED NAVBAR CSS */
+.admin-nav {
+  background: var(--primary, #03045e);
+  color: white;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+}
+.nav-logo { font-weight: 700; font-size: 1.1rem; }
+.nav-links { list-style: none; display: flex; gap: 18px; margin: 0; padding: 0;}
+.nav-links a {
+  color: white; text-decoration: none; font-weight: 500;
+  padding: 6px 10px; border-radius: 6px; transition: background 0.2s;
+}
+.nav-links a:hover { background: rgba(255, 255, 255, 0.15); }
+.nav-links a.active { color: #FFD166; font-weight: 700; }
+.nav-toggle { display: none; font-size: 1.4rem; background: none; border: none; color: white; cursor: pointer; }
+
+@media (max-width: 768px) {
+  .nav-links {
+    position: absolute; top: 56px; right: 0;
+    background: var(--primary, #03045e);
+    flex-direction: column; width: 200px; padding: 10px; display: none;
+  }
+  .nav-links.show { display: flex; }
+  .nav-toggle { display: block; }
+}
+
+/* ATTENDANCE SPECIFIC UI */
+main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+.controls{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap: 10px; }
+.controls input, .modal-box input{ padding:8px; border-radius:8px; border:1px solid #ccc }
+.columns{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px }
+@media (max-width: 768px) { .columns { grid-template-columns: 1fr; } }
+.column{ background:#f8f8f8; border-radius:12px; padding:10px }
+.column h3{ text-align:center; margin-bottom:8px }
+.card{ background:#fff; border-radius:10px; box-shadow:var(--shadow); padding:10px; margin-bottom:8px; position: relative; }
+.name{ font-weight:800; color:var(--primary); cursor:pointer }
+.role{ font-size:.85rem; color:#555; margin-bottom:6px }
+.actions{ display:flex; gap:6px }
+.btn{ flex:1; padding:6px; border:none; border-radius:8px; font-weight:700; cursor:pointer }
+.btn-present{background:var(--present);color:#fff}
+.btn-absent{background:var(--absent);color:#fff}
+.edit-btn { position: absolute; top: 6px; right: 6px; background: #eee; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; cursor: pointer; padding: 4px 8px; }
+
+/* MODAL */
+.modal{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:200 }
+.modal-box{ background:#fff; width:90%; max-width:400px; border-radius:14px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.stat{ display:flex; justify-content:space-between; margin:10px 0; font-weight:700; padding: 8px; background: #f9f9f9; border-radius: 6px; }
+.history{ max-height:100px; overflow:auto; font-weight: bold; text-align: center; margin-top:10px; padding: 10px; background: #e9ecef; border-radius: 8px; }
+.close{ margin-top:12px; width:100%; padding:10px; border:none; border-radius:8px; cursor: pointer; background: #6c757d; color: white; }
+.export-confirm-btn { margin-top: 15px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+</style>
+</head>
+
+<body>
+<header>
+  Staff Attendance
+  <div class="logout-container">
+    <button id="logoutBtn">Logout</button>
+  </div>
+</header>
+
+  <nav class="admin-nav">
+  <div class="nav-container">
+    <div class="nav-logo"></div>
+
+    <button class="nav-toggle" id="navToggle">☰</button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="canteen.html">Canteen Panel</a></li>
+      <li><a href="menumanagment.html">Menu</a></li>
+      <li><a href="AddMenu.html">Add/Edit Menu</a></li>
+      <li><a href="staff-attendance.html">Staff Attendance</a></li>
+      <li><a href="KOT.html">KOT</a></li>
+      <li><a href="Ready.html">Ready Screen</a></li>
+      
+    </ul>
+  </div>
+</nav>
+
+
+<main>
+  <div class="controls">
+    <div>
+      <strong>Select Date</strong>
+      <input type="date" id="datePicker" />
+    </div>
+    <button id="exportCsvBtn" style="padding:8px;border-radius:8px;cursor:pointer;background:#fff;border:1px solid #ccc;font-weight:bold;">Export CSV Report</button>
+  </div>
+
+  <div class="columns">
+    <div class="column">
+      <h3>Not Marked</h3>
+      <div id="not_marked"></div>
+    </div>
+    <div class="column">
+      <h3>Present</h3>
+      <div id="present"></div>
+    </div>
+    <div class="column">
+      <h3>Absent</h3>
+      <div id="absent"></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal" id="profileModal">
+  <div class="modal-box">
+    <h2 id="profileName" style="margin-top:0; color:var(--primary)"></h2>
+    <p style="font-size:0.9rem; color:#666;">Attendance Summary (This Month):</p>
+    <div class="stat" style="color:var(--present)"><span>Present</span><span id="pCount">0</span></div>
+    <div class="stat" style="color:var(--absent)"><span>Absent</span><span id="aCount">0</span></div>
+    <hr style="margin:20px 0"/>
+    <label><strong>Check History (Any Date):</strong></label>
+    <input type="date" id="profileDate" style="width:100%;padding:10px;margin:10px 0"/>
+    <div class="history" id="profileHistory">Select a date above</div>
+    <button class="close" onclick="closeProfile()">Close</button>
+  </div>
+</div>
+
+<div class="modal" id="exportModal">
+  <div class="modal-box">
+    <h3>Export CSV Report</h3>
+    <p>Select date range for attendance summary.</p>
+    <div style="margin-top:10px">
+        <label>From Date:</label>
+        <input type="date" id="exportFrom" style="width:100%; margin-bottom:10px;">
+        <label>To Date:</label>
+        <input type="date" id="exportTo" style="width:100%;">
+    </div>
+    <button id="confirmExport" class="export-confirm-btn">Download Report</button>
+    <button class="close" onclick="document.getElementById('exportModal').style.display='none'">Cancel</button>
+  </div>
+</div>
+
+<script type="module">
+import { db, auth } from "./firebase-config.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import {
+  collection, onSnapshot, query, where,
+  addDoc, updateDoc, serverTimestamp, getDocs, deleteDoc, doc, getDoc
+} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+// --- NAV TOGGLE ---
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+navToggle.onclick = () => navLinks.classList.toggle('show');
+
+// --- AUTH GUARD ---
+let currentUser = null;
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    const currentPage = encodeURIComponent(window.location.pathname);
+    window.location.href = `login.html?redirect=${currentPage}`;
+    return;
+  }
+
+  // Fetch user role
+  const userDoc = await getDoc(doc(db, "users", user.uid));
+  const role = userDoc.exists() ? userDoc.data().role : null;
+
+  // Allow admin OR staff
+  if (!role || (role !== "admin" && role !== "staff")) {
+    alert("You are not authorized!");
+    await signOut(auth);
+    window.location.href = "login.html";
+    return;
+  }
+
+  currentUser = user; // Authorized
+});
+
+// --- LOGOUT ---
+document.getElementById("logoutBtn").onclick = async () => {
+  await signOut(auth);
+  window.location.href = "login.html";
+};
+
+// --- ATTENDANCE LOGIC ---
+const datePicker = document.getElementById("datePicker");
+datePicker.value = new Date().toISOString().split("T")[0];
+
+const containers = {
+  not_marked: document.getElementById("not_marked"),
+  present: document.getElementById("present"),
+  absent: document.getElementById("absent")
+};
+
+let staffList = [];
+let attendanceMap = {};
+
+function render() {
+  Object.values(containers).forEach(c => c.innerHTML = "");
+
+  staffList.forEach(s => {
+    const rec = attendanceMap[s.id] || { status: "not_marked" };
+    const isMarked = rec.status !== "not_marked";
+    
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="name" onclick="openProfile('${s.id}', '${s.name}')">${s.name}</div>
+      <div class="role">${s.role || ""}</div>
+      ${isMarked ? `<button class="edit-btn">✏️ Edit</button>` : `
+        <div class="actions">
+          <button class="btn btn-present">Present</button>
+          <button class="btn btn-absent">Absent</button>
+        </div>
+      `}
+    `;
+
+    if (!isMarked) {
+      card.querySelector(".btn-present").onclick = () => mark(s, "present");
+      card.querySelector(".btn-absent").onclick = () => mark(s, "absent");
+    } else {
+      card.querySelector(".edit-btn").onclick = () => mark(s, "not_marked");
+    }
+    containers[rec.status].appendChild(card);
+  });
+}
+
+async function mark(staff, status) {
+  const rec = attendanceMap[staff.id];
+  try {
+    if (status === "not_marked") {
+      if (rec?.id) await deleteDoc(doc(db, "staffAttendance", rec.id));
+      return;
+    }
+    if (rec?.id) {
+      await updateDoc(doc(db, "staffAttendance", rec.id), { status, updatedAt: serverTimestamp() });
+    } else {
+      await addDoc(collection(db, "staffAttendance"), {
+        staffId: staff.id, staffName: staff.name,
+        date: datePicker.value, status, updatedAt: serverTimestamp()
+      });
+    }
+  } catch (err) {
+    alert("Permission Denied.");
+  }
+}
+
+// Fetch staff list
+onSnapshot(collection(db, "staff"), snap => {
+  staffList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  render();
+});
+
+// Attendance live
+let dailyAttendanceUnsubscribe = null;
+function loadAttendance() {
+  if (dailyAttendanceUnsubscribe) dailyAttendanceUnsubscribe();
+  dailyAttendanceUnsubscribe = onSnapshot(
+    query(collection(db, "staffAttendance"), where("date", "==", datePicker.value)),
+    snap => {
+      attendanceMap = {};
+      snap.docs.forEach(d => { attendanceMap[d.data().staffId] = { ...d.data(), id: d.id }; });
+      render();
+    }
+  );
+}
+datePicker.onchange = loadAttendance;
+loadAttendance();
+
+// --- FIXED PROFILE LOGIC ---
+let profileUnsubscribe = null;
+
+window.closeProfile = function() {
+  document.getElementById("profileModal").style.display = "none";
+  if (profileUnsubscribe) {
+    profileUnsubscribe();
+    profileUnsubscribe = null;
+  }
+};
+
+window.openProfile = async function(staffId, staffName) {
+  document.getElementById("profileModal").style.display = "flex";
+  document.getElementById("profileName").textContent = staffName;
+  document.getElementById("profileHistory").textContent = "Select a date above";
+  document.getElementById("profileDate").value = "";
+
+  // 1. Better date string (YYYY-MM-01) to avoid timezone shifts
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const startStr = `${year}-${month}-01`;
+
+  if (profileUnsubscribe) profileUnsubscribe();
+
+  // 2. Optimized Query: Query only by Staff Name (matches CSV logic)
+  // This avoids "Composite Index" requirements and counts all records for this person
+  profileUnsubscribe = onSnapshot(query(
+    collection(db, "staffAttendance"), 
+    where("staffName", "==", staffName)
+  ), (snap) => {
+    let p = 0, a = 0;
+    
+    snap.docs.forEach(d => {
+      const data = d.data();
+      // Filter by date inside JavaScript to ensure 100% accuracy without complex indexing
+      if (data.date >= startStr) {
+        if (data.status === "present") p++;
+        else if (data.status === "absent") a++;
+      }
+    });
+    
+    document.getElementById("pCount").textContent = p;
+    document.getElementById("aCount").textContent = a;
+  });
+
+  // History Lookup for a specific date
+  document.getElementById("profileDate").onchange = async (e) => {
+    const selDate = e.target.value;
+    if(!selDate) return;
+    
+    // Uses the same Name-based search to ensure consistency with CSV
+    const hSnap = await getDocs(query(
+      collection(db, "staffAttendance"), 
+      where("staffName", "==", staffName), 
+      where("date", "==", selDate)
+    ));
+    
+    document.getElementById("profileHistory").innerHTML = hSnap.empty ? 
+      "<span style='color:orange'>No record</span>" : 
+      `Status: <span style="text-transform:uppercase; color:var(--${hSnap.docs[0].data().status})">${hSnap.docs[0].data().status}</span>`;
+  };
+};
+
+// --- EXPORT ---
+document.getElementById("exportCsvBtn").onclick = () => { document.getElementById("exportModal").style.display = "flex"; };
+document.getElementById("confirmExport").onclick = async () => {
+  const from = document.getElementById("exportFrom").value;
+  const to = document.getElementById("exportTo").value;
+  if (!from || !to) return alert("Select dates");
+  const snap = await getDocs(query(collection(db, "staffAttendance"), where("date", ">=", from), where("date", "<=", to)));
+  if(snap.empty) return alert("No records");
+
+  let csv = `Staff Name,Date,Status\n`;
+  let totals = {};
+  snap.forEach(d => {
+    const a = d.data();
+    csv += `${a.staffName},${a.date},${a.status}\n`;
+    if(!totals[a.staffName]) totals[a.staffName] = {p: 0, a: 0};
+    if(a.status === "present") totals[a.staffName].p++;
+    if(a.status === "absent") totals[a.staffName].a++;
+  });
+  csv += "\n--- SUMMARY ---\nStaff Name,Total Present,Total Absent\n";
+  for (const name in totals) csv += `${name},${totals[name].p},${totals[name].a}\n`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = `Report_${from}_to_${to}.csv`;
+  a.click();
+  document.getElementById("exportModal").style.display = "none";
+};
+</script>
+</body>
+</html>

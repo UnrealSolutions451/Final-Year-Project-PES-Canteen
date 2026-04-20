@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Staff Management — Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --primary: #03045e;
+      --accent: #FFD166;
+      --danger: #d22c27;
+      --warning: #f6c344;
+      --success: #28a745;
+      --card-bg: #fff;
+      --bg: #efefef;
+      --radius: 12px;
+      --shadow: 0 6px 18px rgba(15,23,42,0.06);
+      --transition: all 0.22s ease;
+      --muted: #535a67;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
+    body { background: var(--bg); color: #17202a; min-height: 100vh; display:flex; flex-direction:column; }
+
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 16px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      box-shadow: var(--shadow);
+      font-weight:700;
+      font-size:1.25rem;
+    }
+    .logout-container { position: absolute; right: 18px; top: 12px; }
+    #logoutBtn {
+      background: var(--danger);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 18px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    main { max-width:1100px; margin: 18px auto; width: 94%; flex:1; }
+
+    .top { display:flex; gap:14px; flex-wrap:wrap; margin-bottom: 14px; }
+    .card { background:var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+
+    .left { flex: 1 1 360px; }
+    .right { flex: 2 1 560px; }
+
+    form .row { display:flex; gap:10px; margin-bottom:8px; }
+    label { display:block; font-size:0.85rem; color:var(--muted); margin-bottom:6px; }
+    input[type="text"], input[type="number"], select, input[type="date"] {
+      width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e6e9ef; font-size:0.95rem;
+    }
+
+    .btn { display:inline-block; padding:6px 10px; border-radius:6px; border:none; cursor:pointer; font-weight:600; font-size:0.85rem; transition:var(--transition); }
+    .btn-primary { background: var(--primary); color:white; }
+    .btn-ghost { background:transparent; border:1px solid #e6e9ef; color:var(--primary); }
+    .btn-danger { background: var(--danger); color:white; }
+
+    .summary { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .stat { padding:10px 12px; border-radius:10px; background:#fff; box-shadow:var(--shadow); min-width:160px; text-align:center; }
+    .stat strong { display:block; font-size:1.05rem; color:var(--primary); margin-bottom:6px; }
+
+    .staff-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-top:12px; }
+
+    .staff-card { position:relative; padding:12px; border-radius:10px; background:#fff; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px; }
+    .staff-top { display:flex; justify-content:space-between; align-items:center; }
+    .staff-name { font-weight:800; color:var(--primary); }
+    .staff-role { color:var(--muted); font-size:0.9rem; }
+    .staff-meta { display:flex; gap:10px; flex-wrap:wrap; font-weight:600; }
+
+    /* Days left colors */
+    .days-red { color: var(--danger); font-weight:700; }
+    .days-yellow { color: var(--warning); font-weight:700; }
+    .days-green { color: var(--success); font-weight:700; }
+
+    /* Status circle */
+    .status-circle {
+      width:12px; height:12px; border-radius:50%;
+      position:absolute; top:6px; right:6px;
+    }
+
+    .card-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .history { display:none; border-top:1px solid #eee; margin-top:6px; padding-top:6px; font-size:0.85rem; }
+    .history-item { border-bottom:1px solid #eee; padding:4px 0; display:flex; justify-content:space-between; }
+    .history-item span { color:var(--muted); font-size:0.8rem; }
+
+    /* Global history */
+    #historyContainer { margin-top:20px; }
+    #historyHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .global-history-item { padding:10px 12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; }
+    .global-history-item span { color:var(--muted); }
+    .delete-btn { background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.85rem; margin-left:8px; display:none; }
+
+    .admin-nav {
+    background: var(--primary, #03045e);
+    color: white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+  }
+  .nav-logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 18px;
+  }
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+  .nav-links a:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  .nav-links a.active {
+    /* background: var(--accent, #FFD166); */
+    color: #FFD166;
+    font-weight: 700;
+  }
+  /* Mobile */
+  .nav-toggle {
+    display: none;
+    font-size: 1.4rem;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+  }
+  @media (max-width: 768px) {
+    .nav-links {
+      position: absolute;
+      top: 56px;
+      right: 0;
+      background: var(--primary, #03045e);
+      flex-direction: column;
+      width: 200px;
+      padding: 10px;
+      display: none;
+    }
+    .nav-links.show {
+      display: flex;
+    }
+    .nav-toggle {
+      display: block;
+    }
+  }
+  </style>
+</head>
+<body>
+  <script type="module" src="auth-guard.js"></script>
+
+  <header>
+    Staff Management
+    <div class="logout-container"><button id="logoutBtn">Logout</button></div>
+  </header>
+  <nav class="admin-nav">
+  <div class="nav-container">
+    <div class="nav-logo">P.E.S. Canteen — Admin</div>
+
+    <button class="nav-toggle" id="navToggle">☰</button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="admin-dashboard.html">Dashboard</a></li>
+      <li><a href="analytics.html">Analytics</a></li>
+      <li><a href="expense.html">Expenses</a></li>
+      <li><a href="staff-managment.html">Staff</a></li>
+    </ul>
+  </div>
+</nav>
+
+  <main>
+    <div class="top">
+      <!-- Add/Update Staff -->
+      <div class="left card"style="background-color: #f8f8f8;" >
+        <h3>Add / Update Staff</h3>
+        <form id="staffForm">
+          <input type="hidden" id="staffId" />
+          <div class="row">
+            <div style="flex:1">
+              <label>Full name</label>
+              <input id="staffName" type="text" required />
+            </div>
+            <div style="width:140px">
+              <label>Frequency</label>
+              <select id="salaryFrequency">
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div style="flex:1">
+              <label>Role</label>
+              <input id="staffRole" type="text" />
+            </div>
+            <div style="width:160px">
+              <label>Salary (₹)</label>
+              <input id="salaryAmount" type="number" />
+            </div>
+          </div>
+          <div class="row">
+            <div style="flex:1">
+              <label>Last Paid Date</label>
+              <input id="lastPaidDate" type="date" />
+            </div>
+            <div style="width:140px; display:flex; align-items:flex-end;">
+              <button class="btn btn-primary" type="submit">Save</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Staff Overview -->
+      <div class="right card" style="background-color: #f8f8f8;">
+        <div style="display:flex; justify-content:space-between;">
+          <h3>Staff Overview</h3>
+          <div>
+            <label style="font-size:.9rem; color:var(--muted)">Due within</label>
+            <select id="dueDays" style="padding:6px;border-radius:8px;">
+              <option value="3">3 days</option>
+              <option value="7" selected>7 days</option>
+              <option value="30">30 days</option>
+              <option value="9999">All</option>
+            </select>
+          </div>
+        </div>
+        <div class="summary">
+          <div class="stat"><strong id="totalStaff">0</strong>Total Staff</div>
+          <div class="stat"><strong id="dueCount">0</strong>Due Soon</div>
+          <div class="stat"><strong id="nextDueLabel">—</strong>Next Salary Date</div>
+        </div>
+        <div id="staffContainer" class="staff-grid"></div>
+      </div>
+    </div>
+
+    <!-- Global Salary History -->
+    <div id="historyContainer" class="card">
+      <div id="historyHeader">
+        <h3>Salary History</h3>
+        <button id="editHistoryBtn" class="btn btn-ghost">Edit History</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+  </main>
+
+    <script>
+  // Toggle mobile nav
+  document.getElementById("navToggle").onclick = () => {
+    document.getElementById("navLinks").classList.toggle("show");
+  };
+
+  // Highlight current page
+  const links = document.querySelectorAll(".nav-links a");
+  links.forEach(link => {
+    if (link.href === window.location.href) {
+      link.classList.add("active");
+    }
+  });
+</script>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    const staffForm = document.getElementById('staffForm');
+    const staffId = document.getElementById('staffId');
+    const staffName = document.getElementById('staffName');
+    const staffRole = document.getElementById('staffRole');
+    const salaryAmount = document.getElementById('salaryAmount');
+    const salaryFrequency = document.getElementById('salaryFrequency');
+    const lastPaidDate = document.getElementById('lastPaidDate');
+    const staffContainer = document.getElementById('staffContainer');
+    const totalStaffEl = document.getElementById('totalStaff');
+    const dueCountEl = document.getElementById('dueCount');
+    const nextDueLabel = document.getElementById('nextDueLabel');
+    const dueDaysSelect = document.getElementById('dueDays');
+    const historyList = document.getElementById('historyList');
+    const editHistoryBtn = document.getElementById('editHistoryBtn');
+
+    let editMode = false;
+
+    const auth = getAuth();
+    document.getElementById("logoutBtn").onclick = () => { signOut(auth); window.location="login.html"; };
+
+    function computeNextSalaryDate(lastPaid, freq) {
+      let d = new Date(lastPaid);
+      if(freq==="weekly") d.setDate(d.getDate()+7);
+      else d.setMonth(d.getMonth()+1);
+      return d;
+    }
+
+    staffForm.onsubmit = async e => {
+      e.preventDefault();
+      const payload = {
+        name: staffName.value, role: staffRole.value, salary: parseFloat(salaryAmount.value)||0,
+        frequency: salaryFrequency.value, lastPaid: lastPaidDate.value||null,
+        nextSalaryDate: lastPaidDate.value ? computeNextSalaryDate(lastPaidDate.value, salaryFrequency.value).toISOString().split("T")[0] : null,
+        updatedAt: serverTimestamp()
+      };
+      if(staffId.value) await updateDoc(doc(db,"staff",staffId.value),payload);
+      else await addDoc(collection(db,"staff"),payload);
+      staffForm.reset(); staffId.value="";
+    };
+
+    async function markSalaryPaid(id, s){
+      const today=new Date();
+      const next=computeNextSalaryDate(today,s.frequency);
+      await updateDoc(doc(db,"staff",id),{lastPaid:today.toISOString().split("T")[0],nextSalaryDate:next.toISOString().split("T")[0],updatedAt:serverTimestamp()});
+      await addDoc(collection(db,"salaryHistory"),{staffId:id,staffName:s.name,amount:s.salary,type:"salary",datePaid:today.toISOString().split("T")[0],paidBy:auth.currentUser?.email||"Admin",createdAt:serverTimestamp()});
+    }
+
+    async function recordAdvance(id,s){
+      const amt=parseFloat(prompt(`Advance amount for ${s.name}`));
+      if(!amt||amt<=0) return;
+      const perDay=s.frequency==="weekly"?s.salary/7:s.salary/30;
+      const extraDays=Math.round(amt/perDay);
+      let next=new Date(s.nextSalaryDate||new Date());
+      next.setDate(next.getDate()+extraDays);
+      await updateDoc(doc(db,"staff",id),{nextSalaryDate:next.toISOString().split("T")[0],updatedAt:serverTimestamp()});
+      await addDoc(collection(db,"salaryHistory"),{staffId:id,staffName:s.name,amount:amt,type:"advance",datePaid:new Date().toISOString().split("T")[0],paidBy:auth.currentUser?.email||"Admin",createdAt:serverTimestamp()});
+    }
+
+    function getColor(days) {
+      if (days <= 1) return {cls:"days-red", color:"#d22c27"};
+      if (days <= 7) return {cls:"days-yellow", color:"#f6c344"};
+      return {cls:"days-green", color:"#28a745"};
+    }
+
+    function renderStaff(list){
+      staffContainer.innerHTML=""; totalStaffEl.textContent=list.length;
+      let dueCount=0, earliest=null, earliestStaff="";
+      list.forEach(s=>{
+        if(s.nextSalaryDate){
+          const d=new Date(s.nextSalaryDate);
+          if(!earliest||d<earliest){earliest=d; earliestStaff=s.name;}
+          if((d-new Date())/(1000*60*60*24)<=parseInt(dueDaysSelect.value)) dueCount++;
+        }
+      });
+      dueCountEl.textContent=dueCount;
+      nextDueLabel.textContent=earliest? `${earliest.toISOString().split("T")[0]} (${earliestStaff})`:"—";
+
+      list.forEach(s=>{
+        const nextDate=s.nextSalaryDate?new Date(s.nextSalaryDate):null;
+        let daysLeft=nextDate?Math.ceil((nextDate-new Date())/(1000*60*60*24)):null;
+        const {cls,color}=getColor(daysLeft??999);
+
+        const card=document.createElement("div");
+        card.className="staff-card";
+        card.innerHTML=`
+          <div class="status-circle" style="background:${color}"></div>
+          <div class="staff-top">
+            <div><div class="staff-name">${s.name}</div><div class="staff-role">${s.role}</div></div>
+            <div>${s.nextSalaryDate||"—"}</div>
+          </div>
+          <div class="staff-meta">
+            ₹${s.salary} | ${s.frequency} | Last: ${s.lastPaid||"—"} | 
+            <span class="${cls}">${daysLeft!==null?daysLeft+" days left":"—"}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-primary">Mark Paid</button>
+            <button class="btn btn-ghost">Advance</button>
+            <button class="btn btn-ghost">History ⯆</button>
+            <button class="btn btn-ghost">Edit</button>
+            <button class="btn btn-danger">Delete</button>
+          </div>
+          <div class="history"></div>`;
+        const [paidBtn,advBtn,histBtn,editBtn,delBtn]=card.querySelectorAll("button");
+        const histDiv=card.querySelector(".history");
+        paidBtn.onclick=()=>markSalaryPaid(s.id,s);
+        advBtn.onclick=()=>recordAdvance(s.id,s);
+        editBtn.onclick=()=>{staffId.value=s.id;staffName.value=s.name;staffRole.value=s.role;salaryAmount.value=s.salary;salaryFrequency.value=s.frequency;lastPaidDate.value=s.lastPaid||"";};
+        delBtn.onclick=()=>deleteDoc(doc(db,"staff",s.id));
+        histBtn.onclick=()=>histDiv.style.display=histDiv.style.display==="block"?"none":"block";
+
+        onSnapshot(query(collection(db,"salaryHistory"),where("staffId","==",s.id),orderBy("createdAt","desc")),snap=>{
+          histDiv.innerHTML=snap.docs.map(d=>{
+            const h=d.data(); return `<div class="history-item"><div>${h.type==="advance"?"Advance":"Salary"} ₹${h.amount}</div><span>${h.datePaid} by ${h.paidBy}</span></div>`;
+          }).join("");
+        });
+        staffContainer.appendChild(card);
+      });
+    }
+
+    // Refresh staff when dropdown changes
+    dueDaysSelect.onchange=()=>onSnapshot(collection(db,"staff"),snap=>renderStaff(snap.docs.map(d=>({id:d.id,...d.data()}))));
+
+    onSnapshot(collection(db,"staff"),snap=>renderStaff(snap.docs.map(d=>({id:d.id,...d.data()}))));
+
+    // Global history
+    onSnapshot(query(collection(db,"salaryHistory"),orderBy("createdAt","desc")),snap=>{
+      historyList.innerHTML=snap.docs.map(d=>{
+        const h=d.data(); 
+        return `<div class="global-history-item">
+          <div><strong>${h.staffName}</strong> — ${h.type==="advance"?"Advance":"Salary"} ₹${h.amount}</div>
+          <span>${h.datePaid} by ${h.paidBy}</span>
+          <button class="delete-btn" data-id="${d.id}">🗑️</button>
+        </div>`;
+      }).join("");
+
+      // Attach delete handlers
+      historyList.querySelectorAll(".delete-btn").forEach(btn=>{
+        btn.onclick=()=>deleteDoc(doc(db,"salaryHistory",btn.dataset.id));
+        btn.style.display = editMode ? "inline" : "none";
+      });
+    });
+
+    // Toggle edit mode
+    editHistoryBtn.onclick = ()=>{
+      editMode = !editMode;
+      editHistoryBtn.textContent = editMode ? "Done" : "Edit History";
+      historyList.querySelectorAll(".delete-btn").forEach(btn=>{
+        btn.style.display = editMode ? "inline" : "none";
+      });
+    };
+  </script>
+</body>
+</html>

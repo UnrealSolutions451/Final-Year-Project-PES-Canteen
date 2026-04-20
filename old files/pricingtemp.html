@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Menu Transfer Tool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  font-family:Segoe UI,system-ui;
+  background:#f4f6f8;
+  padding:20px;
+}
+.container{
+  max-width:900px;
+  margin:auto;
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,.1);
+}
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+}
+.btn-export{background:#03045e;color:#fff}
+.btn-import{background:#1a8f3d;color:#fff}
+.btn-logout{background:#d22c27;color:#fff}
+pre{
+  background:#111;
+  color:#0f0;
+  padding:10px;
+  border-radius:8px;
+  max-height:220px;
+  overflow:auto;
+}
+.actions{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+  <h3>🔐 Menu Transfer</h3>
+  <button id="logoutBtn" class="btn-logout">Logout</button>
+</header>
+
+<h2>📦 Menu Import / Export</h2>
+
+<div class="actions">
+  <button id="exportBtn" class="btn-export">⬇ Export CSV</button>
+  <input type="file" id="csvFile" accept=".csv">
+  <button id="importBtn" class="btn-import">⬆ Import CSV</button>
+</div>
+
+<h3>Logs</h3>
+<pre id="log"></pre>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const logBox = document.getElementById("log");
+let currentUser = null;
+
+/* AUTH GUARD */
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = "login.html?redirect=menu-transfer.html";
+    return;
+  }
+
+  const userDoc = await getDoc(doc(db,"users",user.uid));
+  const role = userDoc.exists() ? userDoc.data().role : null;
+
+  if (role !== "admin" && role !== "staff") {
+    alert("Not authorized");
+    await signOut(auth);
+    window.location.href="login.html";
+    return;
+  }
+
+  currentUser = user;
+  log(`Logged in as ${role}`);
+});
+
+/* LOGOUT */
+document.getElementById("logoutBtn").onclick = async()=>{
+  await signOut(auth);
+  window.location.href="loginMain.html";
+};
+
+/* EXPORT */
+document.getElementById("exportBtn").onclick = async()=>{
+  const snap = await getDocs(collection(db,"menu"));
+  if (snap.empty) return log("No menu found");
+
+  const fields = ["name","price","category","available","description","image"];
+  const rows = [];
+
+  snap.forEach(d=>{
+    const data = d.data();
+    rows.push(fields.map(f=>JSON.stringify(data[f] ?? "")).join(","));
+  });
+
+  const csv = fields.join(",") + "\n" + rows.join("\n");
+  download(csv);
+  log(`Exported ${rows.length} items`);
+};
+
+/* IMPORT — FINAL FIX */
+document.getElementById("importBtn").onclick = async()=>{
+  const file = document.getElementById("csvFile").files[0];
+  if (!file) return alert("Select CSV file");
+
+  const text = await file.text();
+  const [header, ...lines] = text.split("\n");
+  const headers = header.split(",");
+
+  let count = 0;
+
+  for (const line of lines) {
+    if (!line.trim()) continue;
+
+    const values = parseCSV(line);
+    const obj = {};
+
+    headers.forEach((h,i)=>{
+      let v = values[i];
+      try { v = JSON.parse(v); } catch {}
+
+      if (h === "available") {
+        obj.available = true; // 🔥 FORCE BOOLEAN TRUE
+        return;
+      }
+
+      if (v !== "" && v !== undefined) obj[h] = v;
+    });
+
+    if (!obj.name) continue;
+
+    const docId = String(obj.name)
+      .trim()
+      .replace(/\//g, "-");
+
+    if (obj.available === undefined) {
+      obj.available = true; // 🔥 default true
+    }
+
+    await setDoc(doc(db,"menu",docId), obj, { merge:true });
+    count++;
+  }
+
+  log(`Imported ${count} items (availability ON)`);
+};
+
+/* CSV PARSER — SPACE SAFE */
+function parseCSV(line){
+  const regex = /(".*?"|[^,]+)(?=,|$)/g;
+  return line.match(regex)?.map(v =>
+    v.replace(/^"|"$/g,"").trim()
+  ) || [];
+}
+
+function download(content){
+  const blob = new Blob([content],{type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "menu-backup.csv";
+  a.click();
+}
+
+function log(msg){
+  logBox.textContent += msg + "\n";
+}
+</script>
+
+</body>
+</html>

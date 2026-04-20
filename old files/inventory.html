@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory & Recipe Management</title>
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #46a0fa;
+      --danger: #d22c27;
+      --success: #28a745;
+      --card-bg: #fff;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+      --transition: all 0.3s ease;
+    }
+
+    body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 600;
+      position: relative;
+    }
+
+    h1 { text-align: center; color: #333; }
+    .form-container, .inventory-list, .recipe-container {
+      background: #fff; padding: 20px; border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;
+    }
+    input, button, select {
+      padding: 10px; margin: 5px 0; border-radius: 5px;
+      border: 1px solid #ccc; width: 100%;
+    }
+    button { background: #03045e; color: #fff; font-weight: bold; cursor: pointer; }
+    button:hover { background: #0466c8; }
+    .low-stock { color: red; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+    .menu-block { margin-bottom: 20px; }
+    .menu-title { font-weight: bold; font-size: 16px; margin-top: 10px; }
+
+    .logout-container {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+    }
+
+    #logoutBtn {
+      background: #d22c27;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    #logoutBtn:hover {
+      background: #a71d2a;
+    }
+  </style>
+</head>
+<body>
+  <!-- ✅ Protect page -->
+  <script type="module" src="auth-guard.js"></script>
+
+  <header>
+    Inventory & Recipe Management
+    <div class="logout-container">
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <!-- Inventory Section -->
+  <div class="form-container">
+    <h3>Add / Update Inventory Item</h3>
+    <input type="text" id="itemName" placeholder="Item Name">
+    <input type="number" id="itemStock" placeholder="Stock Quantity" step="0.0001">
+    <input type="text" id="itemUnit" placeholder="Unit (kg, pcs, etc)">
+    <!-- <input type="text" id="itemMin" placeholder="Minimum Stock Level" step="0.0001"> -->
+    <button id="saveItem">Save Item</button>
+  </div>
+
+  <div class="inventory-list">
+    <h3>Current Inventory</h3>
+    <table>
+      <thead>
+        <tr><th>Item</th><th>Stock</th><th>Unit</th><th>Min</th><th>Status</th></tr>
+      </thead>
+      <tbody id="inventoryTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Recipe Section -->
+  <div class="recipe-container">
+    <h3>Add / Update Recipe</h3>
+    <select id="menuItemSelect">
+      <option value="">-- Select Menu Item --</option>
+    </select>
+    <input type="text" id="ingredientName" placeholder="Ingredient Name">
+    <input type="number" id="ingredientQty" placeholder="Quantity Required" step="0.0001">
+    <button id="saveRecipe">Save Recipe</button>
+  </div>
+
+  <div class="inventory-list">
+    <h3>Recipes</h3>
+    <div id="recipeTable"></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { getFirestore, collection, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // ✅ Logout
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      try {
+        const currentPath = window.location.pathname + window.location.search;
+        await signOut(auth);
+        sessionStorage.setItem("redirectAfterLogin", currentPath);
+        window.location.href = "login.html";
+      } catch (err) {
+        console.error("Logout failed", err);
+      }
+    });
+
+    const itemName = document.getElementById("itemName");
+    const itemStock = document.getElementById("itemStock");
+    const itemUnit = document.getElementById("itemUnit");
+    const itemMin = document.getElementById("itemMin");
+    const saveItemBtn = document.getElementById("saveItem");
+    const inventoryTable = document.getElementById("inventoryTable");
+
+    const menuItemSelect = document.getElementById("menuItemSelect");
+    const ingredientName = document.getElementById("ingredientName");
+    const ingredientQty = document.getElementById("ingredientQty");
+    const saveRecipeBtn = document.getElementById("saveRecipe");
+    const recipeTable = document.getElementById("recipeTable");
+
+    // ----------------- INVENTORY -----------------
+    async function loadInventory() {
+      inventoryTable.innerHTML = "";
+      const snap = await getDocs(collection(db, "inventory"));
+      snap.forEach(docSnap => {
+        const item = docSnap.data();
+        const stock = (typeof item.stock === "number") ? item.stock.toFixed(3) : item.stock;
+        const minStock = (typeof item.minStock === "number") ? item.minStock.toFixed(3) : item.minStock;
+        const low = parseFloat(item.stock) <= parseFloat(item.minStock) ? `<span class='low-stock'>Low Stock</span>` : "OK";
+        inventoryTable.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${stock}</td>
+            <td>${item.unit}</td>
+            <td>${minStock}</td>
+            <td>${low}</td>
+          </tr>`;
+      });
+    }
+
+    saveItemBtn.addEventListener("click", async () => {
+      const name = itemName.value.trim();
+      const stock = parseFloat(itemStock.value);
+      const unit = itemUnit.value.trim();
+      const min = parseFloat(itemMin.value);
+
+      if (!name || isNaN(stock) || !unit || isNaN(min)) {
+        alert("Please fill all fields");
+        return;
+      }
+
+      await setDoc(doc(db, "inventory", name), {
+        name, stock, unit, minStock: min
+      });
+
+      itemName.value = "";
+      itemStock.value = "";
+      itemUnit.value = "";
+      itemMin.value = "";
+      loadInventory();
+    });
+
+    // ----------------- RECIPES -----------------
+    async function loadMenuItems() {
+      menuItemSelect.innerHTML = `<option value="">-- Select Menu Item --</option>`;
+      const snap = await getDocs(collection(db, "menu"));
+      snap.forEach(docSnap => {
+        const menu = docSnap.data();
+        menuItemSelect.innerHTML += `<option value="${docSnap.id}">${menu.name || docSnap.id}</option>`;
+      });
+    }
+
+    async function loadRecipes() {
+      recipeTable.innerHTML = "";
+      const menuSnap = await getDocs(collection(db, "menu"));
+      for (const menuDoc of menuSnap.docs) {
+        const menuData = menuDoc.data();
+        const menuId = menuDoc.id;
+        const recipeSnap = await getDocs(collection(db, `menu/${menuId}/recipe`));
+
+        if (!recipeSnap.empty) {
+          let recipeHTML = `<div class="menu-block">
+            <div class="menu-title">${menuData.name || menuId}</div>
+            <table>
+              <thead><tr><th>Ingredient</th><th>Qty</th></tr></thead>
+              <tbody>`;
+
+          recipeSnap.forEach(r => {
+            const ingredientName = r.id; // doc id = ingredient name
+            const rec = r.data();
+            const qty = rec.quantity || rec.qty || "-";
+            recipeHTML += `<tr><td>${ingredientName}</td><td>${qty}</td></tr>`;
+          });
+
+          recipeHTML += `</tbody></table></div>`;
+          recipeTable.innerHTML += recipeHTML;
+        }
+      }
+    }
+
+    saveRecipeBtn.addEventListener("click", async () => {
+      const menuItem = menuItemSelect.value;
+      const ingName = ingredientName.value.trim();
+      const qty = parseFloat(ingredientQty.value);
+
+      if (!menuItem || !ingName || isNaN(qty)) {
+        alert("Please fill all fields");
+        return;
+      }
+
+      await setDoc(doc(db, `menu/${menuItem}/recipe`, ingName), {
+        quantity: qty
+      });
+
+      ingredientName.value = "";
+      ingredientQty.value = "";
+      loadRecipes();
+    });
+
+    // Initial load
+    loadInventory();
+    loadMenuItems();
+    loadRecipes();
+  </script>
+</body>
+</html>

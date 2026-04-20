@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - P.E.S. Canteen</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #03045e, #46a0fa);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    .login-card h2 {
+      margin-bottom: 20px;
+      color: #03045e;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #46a0fa;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .error {
+      color: red;
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+    .role-selector {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      background: #f0f4f8;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .role-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s, color 0.3s;
+      color: #03045e;
+    }
+    .role-btn.active {
+      background: #46a0fa;
+      color: white;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h2>🔐 Login</h2>
+
+    <!-- Role Selector -->
+    <div class="role-selector">
+      <button class="role-btn active" id="staffBtn">Staff</button>
+      <button class="role-btn" id="adminBtn">Admin</button>
+    </div>
+
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button id="loginBtn">Login</button>
+    <p id="errorMsg" class="error"></p>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ✅ Role selection toggle
+    let selectedRole = "staff";
+    const staffBtn = document.getElementById("staffBtn");
+    const adminBtn = document.getElementById("adminBtn");
+
+    staffBtn.addEventListener("click", () => {
+      selectedRole = "staff";
+      staffBtn.classList.add("active");
+      adminBtn.classList.remove("active");
+    });
+    adminBtn.addEventListener("click", () => {
+      selectedRole = "admin";
+      adminBtn.classList.add("active");
+      staffBtn.classList.remove("active");
+    });
+
+    // ✅ Login with role check
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const errorMsg = document.getElementById("errorMsg");
+
+      errorMsg.textContent = ""; // reset error box
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 🔎 Fetch role from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (!userDoc.exists()) {
+          errorMsg.textContent = "❌ User role not found. Contact admin.";
+          return;
+        }
+
+        const role = userDoc.data().role;
+
+        // ✅ Exception: Admin can login as both roles
+        if (role === "admin") {
+          if (selectedRole === "admin") {
+            window.location.href = "admin-dashboard.html";
+          } else {
+            window.location.href = "admin-dashboard.html"; // staff panel
+          }
+          return;
+        }
+
+        // 🚫 Staff cannot login as admin
+        if (role === "staff" && selectedRole === "admin") {
+          errorMsg.textContent = "❌ Access denied. You are staff and cannot login as admin.";
+          return;
+        }
+
+        // ✅ Normal staff login
+        if (role === "staff" && selectedRole === "staff") {
+          window.location.href = "canteen.html";
+          return;
+        }
+
+      } catch (err) {
+        errorMsg.textContent = "❌ " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

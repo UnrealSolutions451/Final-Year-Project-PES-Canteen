@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P.E.S. Canteen</title>
+  <style>
+    :root {
+      --primary: #03045e;
+      --secondary: #46a0fa;
+      --price: #d22c27;
+      --buttons: #46a0fa;
+      --accent: #FFD166;
+      --background: #F7FFF7;
+      --text: #292F36;
+      --card-bg: #FFFFFF;
+      --border-radius: 12px;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background-color: var(--background); color: var(--text); padding-bottom: 120px; }
+
+    header {
+      background-color: var(--primary);
+      color: white;
+      height: 90px;
+      padding: 10px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 70px;
+    }
+
+    .logo {
+      position: absolute;
+      left: 20px;
+      max-height: 80px;
+      height: auto;
+      width: auto;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .logo { max-height: 50px; }
+      header h1 { font-size: 1.2rem; }
+    }
+
+    @media (max-width: 480px) {
+      .logo { max-height: 60px; left: 10px; }
+      header h1 { font-size: 1.30rem; }
+    }
+
+    .discount-banner { background-color: var(--accent); color: var(--text); padding: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; }
+
+    .search-container {
+      display: flex;
+      justify-content: right;
+      padding: 10px;
+      background: white;
+      gap: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .search-input {
+      width: 100%;
+      max-width: 500px;
+      padding: 10px 14px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      font-size: 0.95rem;
+      outline: none;
+      transition: var(--transition);
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(3,4,94,0.15);
+    }
+
+    .category-filters {
+      display: flex;
+      overflow-x: auto;
+      padding: 10px;
+      gap: 8px;
+      background: white;
+      position: sticky;
+      top: 90px;
+      z-index: 90;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .category-btn { padding: 8px 16px; border: none; border-radius: 20px; background: #f0f0f0; color: var(--text); font-weight: 500; white-space: nowrap; cursor: pointer; transition: var(--transition); }
+    .category-btn.active { background: var(--primary); color: white; }
+
+    .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; padding: 15px; }
+    .menu-item-card { background: var(--card-bg); border-radius: var(--border-radius); overflow: hidden; box-shadow: var(--shadow); transition: var(--transition); }
+    .menu-item-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+    .menu-item-image { width: 100%; height: 150px; object-fit: cover; border-radius: 8px 8px 0 0; }
+    .menu-item-info { padding: 12px; }
+    .menu-item-name { font-weight: 600; margin-bottom: 4px; font-size: 0.95rem; }
+    .menu-item-price { font-weight: 700; color: var(--price); margin-bottom: 8px; }
+    .add-btn { width: 100%; padding: 8px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: var(--transition); }
+    .add-btn:hover { background: var(--secondary); }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: #666; text-decoration: none; font-size: 0.8rem; flex: 1; padding: 6px 12px; transition: background 0.3s, color 0.3s; }
+    .nav-item.active { background: var(--primary); color: white; border-radius: 12px; }
+    .nav-icon { font-size: 1.2rem; margin-bottom: 4px; }
+    .cart-count { position: absolute; top: -5px; right: -5px; background: var(--primary); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 480px) { .menu-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
+
+    .price-icon-row { display: flex; justify-content: space-between; align-items: center; }
+    .veg-nonveg-icon { width: 20px; height: 20px; object-fit: contain; margin: 10px; }
+
+    footer {
+      background: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 20px 15px;
+      margin-top: 30px;
+      font-size: 0.9rem;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+    }
+    footer p { margin: 6px 0; line-height: 1.4; }
+    footer strong { color: var(--accent); }
+
+    .site-footer {
+      background: #03045e;
+      color: #fff;
+      text-align: center;
+      padding: 15px 10px;
+      font-size: 14px;
+      margin-top: 30px;
+    }
+    .site-footer a {
+      color: #FFD166;
+      text-decoration: none;
+      margin: 0 6px;
+      font-weight: 500;
+    }
+    .site-footer a:hover {
+      text-decoration: underline;
+    }
+    .site-footer .copy {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #ddd;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="Pes_logo.png" alt="Logo" class="logo">
+    <h1>P.E.S. Canteen Menu</h1>
+  </header>
+
+  <div class="discount-banner">📌Canteen Timing 10:30am - 5:30pm</div>
+
+  <div class="search-container">
+    <input type="text" id="searchInput" class="search-input" placeholder="Search for items...">
+  </div>
+
+  <div id="categoryFilters" class="category-filters"></div>
+  <div class="menu-grid" id="menu"></div>
+  <div class="toast" id="toast">Added to cart!</div>
+
+  <footer>
+    <p>P.E.S. College, Nagsenvana, Chh.Sambhajinagar, Maharashtra(431002)</p>
+    <p>📞 Contact: +91 9876543210 </p>
+    <footer class="site-footer">
+      <p>
+        <a href="T&C.html">Terms & Conditions</a> | 
+        <a href="P&P.html">Privacy Policy</a> | 
+        <a href="R&R.html">Return & Refund Policy</a> | 
+        <a href="about.html">About Us</a>
+      </p>
+      <p class="copy">&copy; 2025 P.E.S. Canteen. All rights reserved.</p>
+      <p>
+        Developed By <a href="https://unrealsolutions.pages.dev/">Unreal Solutions</a>
+      </p>
+    </footer>
+  </footer>
+
+  <div class="bottom-nav">
+    <a href="#" class="nav-item active">
+      <span class="nav-icon">🍔</span>
+      <span>Menu</span>
+    </a>
+    <a href="#" class="nav-item" id="cartNav">
+      <span class="nav-icon">🛒</span>
+      <span>Cart</span>
+      <span class="cart-count" id="cartCount">0</span>
+    </a>
+  </div>
+
+    <!-- Put this at the bottom of your file in place of your current <script type="module"> block -->
+  <script type="module">
+    // --- Use the same SDK version for everything (no mixing v9 and v10) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+    
+    const firebaseConfig = {
+  apiKey: "AIzaSyAP24BOJ0mYg7eyy87SyjA_rv-GX391XG0",
+  authDomain: "pescanteen-7beb3.firebaseapp.com",
+  projectId: "pescanteen-7beb3",
+  storageBucket: "pescanteen-7beb3.firebasestorage.app",
+  messagingSenderId: "493780029488",
+  appId: "1:493780029488:web:6da48dbfaf8e37cf721df5"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const tableId = params.get("table") || "default";
+    const sessionId = params.get("session");
+
+    const sessionData = JSON.parse(localStorage.getItem("canteenSession") || "{}");
+    const now = Date.now();
+
+    if (!sessionId || !sessionData.sessionId || sessionId !== sessionData.sessionId || now > sessionData.expiry) {
+      console.warn('Session invalid or expired, redirecting to landing.html');
+      window.location.href = `landing.html?table=${tableId}`;
+    }
+
+    function getCartKey() { return `cart_${tableId}_${sessionId}`; }
+
+    const menuDiv = document.getElementById("menu");
+    const categoryFiltersDiv = document.getElementById("categoryFilters");
+    const cartNav = document.getElementById("cartNav");
+    const cartCount = document.getElementById("cartCount");
+    const toast = document.getElementById("toast");
+    const searchInput = document.getElementById("searchInput");
+
+    cartNav.href = `cart.html?table=${tableId}&session=${sessionId}`;
+
+    let allItems = [];
+
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem(getCartKey())) || [];
+      cartCount.textContent = cart.length;
+      cartCount.style.display = cart.length ? 'flex' : 'none';
+    }
+
+    function showToast(msg = 'Added to cart!') {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    function addToCart(item) {
+      const cart = JSON.parse(localStorage.getItem(getCartKey())) || [];
+      const existingIdx = cart.findIndex(ci => ci.id === item.id);
+      if (existingIdx >= 0) {
+        cart[existingIdx].quantity = (cart[existingIdx].quantity || 1) + 1;
+      } else {
+        cart.push({ id: item.id, name: item.name || 'Item', price: item.price || 0, quantity: 1 });
+      }
+      localStorage.setItem(getCartKey(), JSON.stringify(cart));
+      updateCartCount();
+      showToast();
+    }
+
+    function normalize(v) { return (v ?? '').toString().trim().toLowerCase(); }
+
+    function buildCategoryButtons() {
+      const sequence = ["All", "Drinks", "Food", "Snacks", "Chinese", "Extra"];
+      categoryFiltersDiv.innerHTML = '';
+      sequence.forEach((label, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn' + (idx === 0 ? ' active' : '');
+        btn.dataset.category = label;
+        btn.textContent = label;
+        btn.addEventListener('click', () => {
+          setActiveCategoryButton(btn);
+          renderMenu(label);
+        });
+        categoryFiltersDiv.appendChild(btn);
+      });
+    }
+
+    function setActiveCategoryButton(activeBtn) {
+      document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+      activeBtn.classList.add('active');
+    }
+
+    function renderMenuItems(items) {
+      menuDiv.innerHTML = '';
+      if (!items || items.length === 0) {
+        menuDiv.innerHTML = '<p>No items found.</p>';
+        return;
+      }
+
+      const vegIconUrl = "https://i.ibb.co/Q4tdkcG/Screenshot-2025-08-23-124910.png";
+      const nonVegIconUrl = "https://i.ibb.co/7JvW7cWz/Screenshot-2025-08-23-124938.png";
+
+      items.forEach(item => {
+        const img = item.image && item.image.trim() !== '' ? item.image : 'placeholder-food.jpg';
+
+        let iconHtml = '';
+        if (normalize(item.ty) === "veg") {
+          iconHtml = `<img src="${vegIconUrl}" alt="Veg" class="veg-nonveg-icon">`;
+        } else if (normalize(item.ty) === "non-veg") {
+          iconHtml = `<img src="${nonVegIconUrl}" alt="Non-Veg" class="veg-nonveg-icon">`;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'menu-item-card';
+        card.innerHTML = `
+          <a href="description.html?id=${item.id}&table=${tableId}&session=${sessionId}">
+  <img src="${img}" class="menu-item-image" alt="${item.name || 'Item'}">
+</a>
+          <div class="menu-item-info">
+            <h3 class="menu-item-name">${item.name || 'Item'}</h3>
+            <div class="price-icon-row">
+              <p class="menu-item-price">₹${item.price ?? 0}</p>
+              ${iconHtml}
+            </div>
+            <button class="add-btn">Add</button>
+          </div>
+        `;
+        card.querySelector('.add-btn').addEventListener('click', () => addToCart(item));
+        menuDiv.appendChild(card);
+      });
+    }
+
+    function renderMenu(category = "All") {
+      let filtered = [...allItems];
+      filtered = filtered.filter(it => it.available === true);
+
+      const query = normalize(searchInput.value);
+      if (query) filtered = filtered.filter(it => normalize(it.name).includes(query));
+      if (category !== "All") {
+        filtered = filtered.filter(it =>
+          normalize(it.category) === normalize(category) || normalize(it.ty) === normalize(category)
+        );
+      }
+      renderMenuItems(filtered);
+    }
+
+    // ---------- 5) Robust fetch with detailed logging & single retry ----------
+    function showLoadingUI() {
+      menuDiv.innerHTML = '<p id="menu-loading">Loading menu…</p>';
+    }
+
+    async function fetchMenuOnce() {
+      try {
+        console.log('[Menu] fetching menu collection from Firestore...');
+        const snap = await getDocs(collection(db, 'menu'));
+        console.log('[Menu] fetch completed, docs:', snap.size);
+        allItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        return snap.size;
+      } catch (err) {
+        console.error('[Menu] error fetching menu:', err);
+        throw err;
+      }
+    }
+
+    async function fetchAndInitMenu() {
+      showLoadingUI();
+      try {
+        const size = await fetchMenuOnce();
+        if (size === 0) {
+          // empty on first try — do a mild retry for transient issues
+          console.warn('[Menu] empty result on first fetch — retrying after 500ms');
+          await new Promise(r => setTimeout(r, 500));
+          const retrySize = await fetchMenuOnce();
+          if (retrySize === 0) {
+            console.warn('[Menu] still empty after retry. Rendering "No items".');
+            buildCategoryButtons();
+            renderMenu('All');
+            return;
+          }
+        }
+        buildCategoryButtons();
+        renderMenu('All');
+      } catch (err) {
+        // clear UI & show friendly message
+        menuDiv.innerHTML = '<p>Error loading menu. Open console to see details.</p>';
+      }
+    }
+
+    // ---------- 6) Wire up search + initial calls ----------
+    searchInput.addEventListener("input", () => renderMenu(document.querySelector(".category-btn.active")?.dataset.category || "All"));
+    fetchAndInitMenu();
+    updateCartCount();
+
+    // ---------- 7) Helpful runtime checks for you to see in console ----------
+    console.log('[Index] Firebase initialized, projectId=', firebaseConfig.projectId);
+    // If db ends up undefined, this will help detect it early:
+    if (!db) console.error('[Index] Firestore db is undefined. Check firebaseConfig and SDK versions.');
+  </script>
+
+</body>
+</html>
+

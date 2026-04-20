@@ -1,0 +1,35 @@
+:root {
+  --primary: #03045e;
+  --secondary: #46a0fa;
+  --price: #d22c27;
+  --accent: #FFD166;
+  --background: #F7FFF7;
+  --text: #292F36;
+  --card-bg: #FFFFFF;
+  --border-radius: 12px;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
