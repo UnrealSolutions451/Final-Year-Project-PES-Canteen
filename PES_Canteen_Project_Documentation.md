@@ -219,7 +219,7 @@ All accessible from the footer on the landing, menu, and cart pages.
 | **QR code generation** | `qrcode.react` generates scannable QR for every order code |
 | **QR code scanning** | `html5-qrcode` npm library accesses camera to scan order QRs at canteen panel |
 | **UPI payment QR** | Dynamic UPI deep-link (`upi://pay?pa=...`) encoded as QR image for instant payments |
-| **Voice announcements** | Web Speech API (`SpeechSynthesisUtterance`) reads orders in Indian English |
+| **Voice announcements** | Web Speech API (`SpeechSynthesisUtterance`) reads orders in Indian English |.
 | **Bell notifications** | HTML5 `Audio` API plays bell on new KOT/Ready screen entries |
 | **Analytics charts** | `react-chartjs-2` wrapping Chart.js — Bar, Line, Doughnut charts from Firestore data |
 | **Responsive design** | Inline styles + CSS media queries; staff nav collapses to hamburger on mobile |
