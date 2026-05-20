@@ -1,53 +1,101 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { signOut } from "firebase/auth";
+import { useState, useEffect } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { db } from "../firebase";
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement,
-  PointElement, ArcElement, Title, Tooltip, Legend
+  Chart as ChartJS,
+  CategoryScale, LinearScale, BarElement, LineElement,
+  PointElement, ArcElement, Title, Tooltip, Legend, Filler,
 } from "chart.js";
 import { Bar, Line, Doughnut } from "react-chartjs-2";
+import AdminNav from "../components/AdminNav";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement, LineElement,
+  PointElement, ArcElement, Title, Tooltip, Legend, Filler
+);
 
 const ADMIN_LINKS = [
-  { to: "/admin", label: "Dashboard" },
+  { to: "/admin",     label: "Dashboard" },
   { to: "/analytics", label: "Analytics" },
-  { to: "/expenses", label: "Expenses" },
-  { to: "/staff", label: "Staff" },
+  { to: "/expenses",  label: "Expenses" },
+  { to: "/staff",     label: "Staff" },
 ];
 
-function getLast7Days() {
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(d.toISOString().split("T")[0]);
-  }
-  return days;
-}
+const PALETTE = ["#03045e","#0077b6","#00b4d8","#FFD166","#ef233c","#7209b7","#3a86ff","#06d6a0"];
 
-function getLast6Months() {
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
+function last7Days() {
+  return Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  }
-  return months;
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split("T")[0];
+  });
 }
-
-function formatDate(d) {
-  return new Date(d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+function last6Months() {
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - (5 - i));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 }
-function formatMonth(m) {
+function fmtDay(d) {
+  return new Date(d + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
+function fmtMonth(m) {
   const [y, mo] = m.split("-");
-  return new Date(y, mo - 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return new Date(y, mo - 1).toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
 }
+
+// Shared chart options base
+const BASE_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 800, easing: "easeInOutQuart" },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: "#03045e",
+      titleColor: "#FFD166",
+      bodyColor: "#e0e0e0",
+      padding: 12,
+      cornerRadius: 8,
+      displayColors: false,
+    },
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: "#64748b", font: { size: 11 } },
+    },
+    y: {
+      grid: { color: "rgba(0,0,0,.06)", lineWidth: 1 },
+      ticks: { color: "#64748b", font: { size: 11 } },
+      border: { display: false },
+    },
+  },
+};
+
+const DOUGHNUT_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 800 },
+  plugins: {
+    legend: {
+      display: true,
+      position: "bottom",
+      labels: { color: "#334155", font: { size: 12 }, padding: 14, boxWidth: 14 },
+    },
+    tooltip: {
+      backgroundColor: "#03045e",
+      titleColor: "#FFD166",
+      bodyColor: "#e0e0e0",
+      padding: 12,
+      cornerRadius: 8,
+    },
+  },
+  cutout: "62%",
+};
 
 export default function Analytics() {
-  const location = useLocation();
   const [orders, setOrders] = useState([]);
 
   useEffect(() => {
@@ -57,96 +105,193 @@ export default function Analytics() {
     return unsub;
   }, []);
 
-  // Process data
-  const last7 = getLast7Days();
-  const last6 = getLast6Months();
+  const completed = orders.filter(o => o.status === "completed");
+  const days   = last7Days();
+  const months = last6Months();
 
-  const dailyCounts = last7.map(date =>
-    orders.filter(o => o.date === date && o.status === "completed").length
+  const orderTotal = o =>
+    o.totalAmount || (o.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+
+  const dailyRevenue = days.map(d =>
+    completed.filter(o => o.date === d).reduce((s, o) => s + orderTotal(o), 0)
   );
-  const dailyRevenue = last7.map(date =>
-    orders.filter(o => o.date === date && o.status === "completed")
-      .reduce((s, o) => s + ((o.items || []).reduce((a, i) => a + (i.price || 0) * (i.quantity || 1), 0)), 0)
+  const dailyOrders = days.map(d =>
+    completed.filter(o => o.date === d).length
+  );
+  const monthlyRevenue = months.map(m =>
+    completed.filter(o => o.date?.startsWith(m)).reduce((s, o) => s + orderTotal(o), 0)
   );
 
   // Popular items
-  const itemCounts = {};
-  orders.filter(o => o.status === "completed").forEach(o => {
-    (o.items || []).forEach(i => {
-      itemCounts[i.name] = (itemCounts[i.name] || 0) + (i.quantity || 1);
-    });
-  });
-  const topItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-  const monthlyRevenue = last6.map(month =>
-    orders.filter(o => o.status === "completed" && o.date?.startsWith(month))
-      .reduce((s, o) => s + ((o.items || []).reduce((a, i) => a + (i.price || 0) * (i.quantity || 1), 0)), 0)
+  const itemMap = {};
+  completed.forEach(o =>
+    (o.items || []).forEach(i => { itemMap[i.name] = (itemMap[i.name] || 0) + (i.quantity || 1); })
   );
+  const topItems = Object.entries(itemMap).sort((a, b) => b[1] - a[1]).slice(0, 7);
 
-  const cardStyle = { background: "white", padding: 25, borderRadius: 12, boxShadow: "0 4px 6px rgba(0,0,0,0.1)" };
+  // KPI summary
+  const totalRevenue  = completed.reduce((s, o) => s + orderTotal(o), 0);
+  const todayDate     = new Date().toISOString().split("T")[0];
+  const todayRevenue  = completed.filter(o => o.date === todayDate).reduce((s, o) => s + orderTotal(o), 0);
+  const avgOrderVal   = completed.length ? Math.round(totalRevenue / completed.length) : 0;
+  const bestDayIdx    = dailyRevenue.indexOf(Math.max(...dailyRevenue));
+
+  const kpis = [
+    { label: "Total Revenue",    value: `₹${totalRevenue.toLocaleString("en-IN")}`, icon: "💰" },
+    { label: "Today's Revenue",  value: `₹${todayRevenue.toLocaleString("en-IN")}`, icon: "📅" },
+    { label: "Total Orders",     value: completed.length,                              icon: "🧾" },
+    { label: "Avg Order Value",  value: `₹${avgOrderVal}`,                            icon: "📊" },
+    { label: "Best Day (7d)",    value: dailyRevenue[bestDayIdx] > 0 ? fmtDay(days[bestDayIdx]) : "—", icon: "🏆" },
+  ];
+
+  // Chart datasets
+  const barRevData = {
+    labels: days.map(fmtDay),
+    datasets: [{
+      label: "Revenue ₹",
+      data: dailyRevenue,
+      backgroundColor: days.map((_, i) => i === bestDayIdx ? "#FFD166" : "#0077b6"),
+      borderRadius: 8,
+      borderSkipped: false,
+    }],
+  };
+
+  const lineData = {
+    labels: days.map(fmtDay),
+    datasets: [{
+      label: "Orders",
+      data: dailyOrders,
+      borderColor: "#0077b6",
+      backgroundColor: "rgba(0,119,182,.12)",
+      pointBackgroundColor: "#0077b6",
+      pointBorderColor: "#fff",
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.45,
+      fill: true,
+      borderWidth: 2.5,
+    }],
+  };
+
+  const doughnutData = {
+    labels: topItems.map(([n]) => n),
+    datasets: [{
+      data: topItems.map(([, c]) => c),
+      backgroundColor: PALETTE.slice(0, topItems.length),
+      borderWidth: 2,
+      borderColor: "#fff",
+      hoverOffset: 10,
+    }],
+  };
+
+  const barMonthData = {
+    labels: months.map(fmtMonth),
+    datasets: [{
+      label: "Revenue ₹",
+      data: monthlyRevenue,
+      backgroundColor: monthlyRevenue.map((v, i) =>
+        v === Math.max(...monthlyRevenue) ? "#FFD166" : `rgba(0,180,216,${0.55 + i * 0.07})`
+      ),
+      borderRadius: 8,
+      borderSkipped: false,
+    }],
+  };
+
+  const barOpts = {
+    ...BASE_OPTS,
+    plugins: {
+      ...BASE_OPTS.plugins,
+      tooltip: {
+        ...BASE_OPTS.plugins.tooltip,
+        callbacks: { label: ctx => ` ₹${ctx.parsed.y.toLocaleString("en-IN")}` },
+      },
+    },
+  };
+  const lineOpts = { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } };
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#e1e3e4", color: "#334155", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-      <header style={{
-        display: "flex", justifyContent: "center",
-        background: "#03045e", color: "white", padding: "16px 20px",
-        textAlign: "center", fontSize: "2.2rem", fontWeight: 600,
-        position: "sticky", top: 0, zIndex: 101, boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-      }}>
-        Analytics
-        <div style={{ position: "fixed", top: 10, right: 10 }}>
-          <button onClick={async () => { await signOut(auth); window.location.href = "/login"; }} style={{ background: "#d22c27", color: "white", border: "none", padding: "8px 16px", borderRadius: 20, cursor: "pointer", fontSize: 14, fontWeight: "bold" }}>Logout</button>
-        </div>
-      </header>
+    <>
+      <style>{`
+        .an-page { background:#f1f5f9; color:#334155; min-height:100dvh; display:flex; flex-direction:column; }
+        .an-header { background:#03045e; color:#fff; padding:16px 20px; text-align:center; font-size:1.8rem; font-weight:700; box-shadow:0 4px 6px rgba(0,0,0,.1); }
+        .an-body { padding:20px 16px; max-width:1300px; margin:0 auto; width:100%; flex:1; display:flex; flex-direction:column; gap:20px; }
+        .an-kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+        .an-kpi { background:#fff; border-radius:14px; padding:16px 12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.07); }
+        .an-kpi-icon { font-size:1.6rem; margin-bottom:6px; }
+        .an-kpi-val { font-size:1.25rem; font-weight:800; color:#03045e; margin-bottom:2px; }
+        .an-kpi-label { font-size:1rem; color:#64748b; font-weight:500; }
+        .an-charts { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+        .an-card { background:#fff; border-radius:16px; padding:22px 20px; box-shadow:0 2px 10px rgba(0,0,0,.07); display:flex; flex-direction:column; }
+        .an-card-title { font-size:1rem; font-weight:700; color:#1e293b; margin-bottom:4px; }
+        .an-card-sub { font-size:.8rem; color:#94a3b8; margin-bottom:16px; }
+        .an-chart-wrap { flex:1; min-height:220px; }
+        @media (max-width:900px) {
+          .an-kpis { grid-template-columns:repeat(3,1fr); }
+          .an-charts { grid-template-columns:1fr; }
+        }
+        @media (max-width:560px) {
+          .an-kpis { grid-template-columns:repeat(2,1fr); }
+          .an-header { font-size:1.3rem; }
+          .an-card { padding:16px 14px; }
+        }
+      `}</style>
 
-      <nav style={{ background: "#03045e", color: "white", boxShadow: "0 3px 8px rgba(0,0,0,0.1)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px" }}>
-          <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>P.E.S. Canteen — Admin</div>
-          <ul style={{ listStyle: "none", display: "flex", gap: 18 }}>
-            {ADMIN_LINKS.map(({ to, label }) => (
-              <li key={to}><Link to={to} style={{ color: location.pathname === to ? "#FFD166" : "white", textDecoration: "none", fontWeight: location.pathname === to ? 700 : 500, padding: "6px 10px", borderRadius: 6 }}>{label}</Link></li>
+      <div className="an-page">
+        <header className="an-header">Analytics</header>
+        <AdminNav links={ADMIN_LINKS} />
+
+        <div className="an-body">
+          {/* KPI row */}
+          <div className="an-kpis">
+            {kpis.map(k => (
+              <div key={k.label} className="an-kpi">
+                <div className="an-kpi-icon"></div>
+                <div className="an-kpi-val">{k.value}</div>
+                <div className="an-kpi-label">{k.label}</div>
+              </div>
             ))}
-          </ul>
-        </div>
-      </nav>
+          </div>
 
-      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 25, maxWidth: 1400, margin: "0 auto", flex: 1 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 25 }}>
-          <div style={cardStyle}>
-            <h3 style={{ marginTop: 0, marginBottom: 20, color: "#212529", fontSize: "1.2rem", fontWeight: 600 }}>Daily Orders (Last 7 Days)</h3>
-            <Bar
-              data={{ labels: last7.map(formatDate), datasets: [{ label: "Orders", data: dailyCounts, backgroundColor: "rgba(3,4,94,0.7)", borderRadius: 6 }] }}
-              options={{ responsive: true, plugins: { legend: { display: false } } }}
-            />
-          </div>
-          <div style={cardStyle}>
-            <h3 style={{ marginTop: 0, marginBottom: 20, color: "#212529", fontSize: "1.2rem", fontWeight: 600 }}>Revenue Trend (Last 7 Days)</h3>
-            <Line
-              data={{ labels: last7.map(formatDate), datasets: [{ label: "Revenue ₹", data: dailyRevenue, borderColor: "#46a0fa", backgroundColor: "rgba(70,160,250,0.1)", tension: 0.4, fill: true }] }}
-              options={{ responsive: true }}
-            />
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 25 }}>
-          <div style={cardStyle}>
-            <h3 style={{ marginTop: 0, marginBottom: 20, color: "#212529", fontSize: "1.2rem", fontWeight: 600 }}>Popular Items</h3>
-            <Doughnut
-              data={{
-                labels: topItems.map(([name]) => name),
-                datasets: [{ data: topItems.map(([, count]) => count), backgroundColor: ["#03045e","#46a0fa","#FFD166","#d22c27","#28a745","#f72585"] }]
-              }}
-              options={{ responsive: true }}
-            />
-          </div>
-          <div style={cardStyle}>
-            <h3 style={{ marginTop: 0, marginBottom: 20, color: "#212529", fontSize: "1.2rem", fontWeight: 600 }}>Monthly Revenue (Last 6 Months)</h3>
-            <Bar
-              data={{ labels: last6.map(formatMonth), datasets: [{ label: "Revenue ₹", data: monthlyRevenue, backgroundColor: "rgba(70,160,250,0.7)", borderRadius: 6 }] }}
-              options={{ responsive: true }}
-            />
+          {/* Charts */}
+          <div className="an-charts">
+            <div className="an-card">
+              <div className="an-card-title">Daily Revenue</div>
+              <div className="an-card-sub">Last 7 days — gold bar = best day</div>
+              <div className="an-chart-wrap">
+                <Bar data={barRevData} options={barOpts} />
+              </div>
+            </div>
+
+            <div className="an-card">
+              <div className="an-card-title">Order Volume</div>
+              <div className="an-card-sub">Completed orders per day (last 7 days)</div>
+              <div className="an-chart-wrap">
+                <Line data={lineData} options={lineOpts} />
+              </div>
+            </div>
+
+            <div className="an-card">
+              <div className="an-card-title">Popular Items</div>
+              <div className="an-card-sub">Top 7 by quantity sold</div>
+              <div className="an-chart-wrap" style={{ minHeight: 260 }}>
+                {topItems.length > 0
+                  ? <Doughnut data={doughnutData} options={DOUGHNUT_OPTS} />
+                  : <p style={{ color: "#94a3b8", textAlign: "center", paddingTop: 80 }}>No data yet</p>
+                }
+              </div>
+            </div>
+
+            <div className="an-card">
+              <div className="an-card-title">Monthly Revenue</div>
+              <div className="an-card-sub">Last 6 months — gold bar = best month</div>
+              <div className="an-chart-wrap">
+                <Bar data={barMonthData} options={barOpts} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

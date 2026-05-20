@@ -1,23 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { signOut } from "firebase/auth";
 import {
   collection, onSnapshot, query, where, addDoc,
   updateDoc, serverTimestamp, getDocs, deleteDoc, doc
 } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { db } from "../firebase";
+import AdminNav from "../components/AdminNav";
 
 const STAFF_LINKS = [
-  { to: "/canteen", label: "Canteen Panel" },
-  { to: "/menu-management", label: "Menu" },
-  { to: "/add-menu", label: "Add/Edit Menu" },
+  { to: "/canteen",          label: "Canteen Panel" },
+  { to: "/menu-management",  label: "Menu" },
+  { to: "/add-menu",         label: "Add/Edit Menu" },
   { to: "/staff-attendance", label: "Staff Attendance" },
-  { to: "/kot", label: "KOT" },
-  { to: "/ready", label: "Ready Screen" },
+  { to: "/kot",              label: "KOT" },
+  { to: "/ready",            label: "Ready Screen" },
 ];
 
 export default function StaffAttendance() {
-  const location = useLocation();
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
   const [staffList, setStaffList] = useState([]);
@@ -169,26 +167,10 @@ export default function StaffAttendance() {
 
   return (
     <div style={{ background: "#efefef", padding: 0, margin: 0, minHeight: "100vh" }}>
-      <header style={{
-        background: "#03045e", color: "#fff", padding: 16,
-        fontWeight: 800, textAlign: "center", fontSize: "1.5rem", position: "relative",
-      }}>
+      <header style={{ background: "#03045e", color: "#fff", padding: 16, fontWeight: 800, textAlign: "center", fontSize: "1.5rem", boxShadow: "0 4px 6px rgba(0,0,0,.1)" }}>
         Staff Attendance
-        <div style={{ position: "absolute", top: 14, right: 10 }}>
-          <button onClick={async () => { await signOut(auth); window.location.href = "/login"; }} style={{ background: "#d22c27", color: "white", border: "none", padding: "8px 16px", borderRadius: 20, cursor: "pointer", fontSize: 14, fontWeight: "bold" }}>Logout</button>
-        </div>
       </header>
-
-      <nav style={{ background: "#03045e", color: "white", boxShadow: "0 3px 8px rgba(0,0,0,0.1)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px" }}>
-          <div></div>
-          <ul style={{ listStyle: "none", display: "flex", gap: 18 }}>
-            {STAFF_LINKS.map(({ to, label }) => (
-              <li key={to}><Link to={to} style={{ color: location.pathname === to ? "#FFD166" : "white", textDecoration: "none", fontWeight: location.pathname === to ? 700 : 500, padding: "6px 10px", borderRadius: 6 }}>{label}</Link></li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      <AdminNav links={STAFF_LINKS} logoText="P.E.S. Canteen — Staff" />
 
       <main style={{ padding: 16, maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10 }}>
@@ -199,7 +181,8 @@ export default function StaffAttendance() {
           <button onClick={() => setExportModal(true)} style={{ padding: 8, borderRadius: 8, cursor: "pointer", background: "#fff", border: "1px solid #ccc", fontWeight: "bold" }}>Export CSV Report</button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+        <style>{`.sa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}@media(max-width:640px){.sa-grid{grid-template-columns:1fr}}`}</style>
+        <div className="sa-grid">
           {[
             { title: "Not Marked", items: notMarked },
             { title: "Present", items: present },

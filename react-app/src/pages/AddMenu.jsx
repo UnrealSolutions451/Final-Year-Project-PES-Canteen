@@ -1,22 +1,20 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { signOut } from "firebase/auth";
 import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { db } from "../firebase";
+import AdminNav from "../components/AdminNav";
 
 const STAFF_LINKS = [
-  { to: "/canteen", label: "Canteen Panel" },
-  { to: "/menu-management", label: "Menu" },
-  { to: "/add-menu", label: "Add/Edit Menu" },
+  { to: "/canteen",          label: "Canteen Panel" },
+  { to: "/menu-management",  label: "Menu" },
+  { to: "/add-menu",         label: "Add/Edit Menu" },
   { to: "/staff-attendance", label: "Staff Attendance" },
-  { to: "/kot", label: "KOT" },
-  { to: "/ready", label: "Ready Screen" },
+  { to: "/kot",              label: "KOT" },
+  { to: "/ready",            label: "Ready Screen" },
 ];
 
 const MENU_TEMPLATE = { available: true, category: "Food", description: "", image: "", name: "", price: 0, ty: "veg" };
 
 export default function AddMenu() {
-  const location = useLocation();
   const [menuItems, setMenuItems] = useState([]);
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({});
@@ -78,28 +76,11 @@ export default function AddMenu() {
 
   return (
     <div style={{ background: "#F7FFF7", margin: 0 }}>
-      <header style={{
-        background: "#03045e", color: "#fff", height: 90,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-      }}>
-        <img src="/Pes_logo.png" style={{ position: "absolute", left: 20, maxHeight: 70 }} alt="Logo" />
-        <h1>Add/Edit Menu items</h1>
-        <div style={{ position: "absolute", top: 20, right: 20 }}>
-          <button onClick={async () => { await signOut(auth); window.location.href = "/login"; }} style={{ background: "#d22c27", color: "white", border: "none", padding: "10px 16px", borderRadius: 10, fontWeight: 600 }}>Logout</button>
-        </div>
+      <header style={{ background: "#03045e", color: "#fff", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
+        <img src="/Pes_logo.png" style={{ position: "absolute", left: 20, maxHeight: 50 }} alt="Logo" />
+        <h1 style={{ fontSize: "1.4rem", margin: 0 }}>Add / Edit Menu Items</h1>
       </header>
-
-      <nav style={{ background: "#03045e", color: "white", boxShadow: "0 3px 8px rgba(0,0,0,0.1)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px" }}>
-          <div></div>
-          <ul style={{ listStyle: "none", display: "flex", gap: 18 }}>
-            {STAFF_LINKS.map(({ to, label }) => (
-              <li key={to}><Link to={to} style={{ color: location.pathname === to ? "#FFD166" : "white", textDecoration: "none", fontWeight: location.pathname === to ? 700 : 500, padding: "6px 10px", borderRadius: 6 }}>{label}</Link></li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      <AdminNav links={STAFF_LINKS} logoText="P.E.S. Canteen — Staff" />
 
       <main style={{ maxWidth: 1200, margin: "auto", padding: 16 }}>
         <h2 style={{ textAlign: "center", margin: "12px 0" }}>{editId ? "✏️ Edit Menu Item" : "➕ Add / Edit Menu Item"}</h2>

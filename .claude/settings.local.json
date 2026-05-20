@@ -5,7 +5,8 @@
       "Bash(npm install:*)",
       "Bash(cp \"e:\\\\Project Final Year\\\\Pes Canteen\\\\Pes_logo.png\" \"e:\\\\Project Final Year\\\\Pes Canteen\\\\react-app\\\\public\\\\Pes_logo.png\")",
       "Bash(cp \"e:\\\\Project Final Year\\\\Pes Canteen\\\\bell.mp3\" \"e:\\\\Project Final Year\\\\Pes Canteen\\\\react-app\\\\public\\\\bell.mp3\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npm list *)"
     ]
   }
 }

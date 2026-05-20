@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { signOut } from "firebase/auth";
 import { collection, addDoc, query, orderBy, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { db } from "../firebase";
+import AdminNav from "../components/AdminNav";
 
 const ADMIN_LINKS = [
-  { to: "/admin", label: "Dashboard" },
+  { to: "/admin",     label: "Dashboard" },
   { to: "/analytics", label: "Analytics" },
-  { to: "/expenses", label: "Expenses" },
-  { to: "/staff", label: "Staff" },
+  { to: "/expenses",  label: "Expenses" },
+  { to: "/staff",     label: "Staff" },
 ];
 
 const todayDate = new Date().toISOString().split("T")[0];
@@ -16,7 +15,6 @@ const todayDate = new Date().toISOString().split("T")[0];
 function normalizeDate(d) { if (!d) return ""; return new Date(d).toISOString().split("T")[0]; }
 
 export default function Expense() {
-  const location = useLocation();
   const [date, setDate] = useState(todayDate);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -73,26 +71,10 @@ export default function Expense() {
 
   return (
     <div style={{ fontFamily: "'Segoe UI', sans-serif", background: "#f4f6f8", margin: 0, color: "#333" }}>
-      <header style={{
-        background: "#03045e", color: "white", padding: 16,
-        textAlign: "center", fontSize: "1.5rem", fontWeight: 600, position: "relative",
-      }}>
+      <header style={{ background: "#03045e", color: "white", padding: 16, textAlign: "center", fontSize: "1.5rem", fontWeight: 700, boxShadow: "0 4px 6px rgba(0,0,0,.1)" }}>
         Expense Manager
-        <div style={{ position: "absolute", top: 15, right: 20 }}>
-          <button onClick={async () => { await signOut(auth); window.location.href = "/login"; }} style={{ background: "#d22c27", color: "white", border: "none", padding: "8px 16px", borderRadius: 20, cursor: "pointer", fontWeight: "bold" }}>Logout</button>
-        </div>
       </header>
-
-      <nav style={{ background: "#03045e", color: "white", boxShadow: "0 3px 8px rgba(0,0,0,0.1)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px" }}>
-          <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>P.E.S. Canteen — Admin</div>
-          <ul style={{ listStyle: "none", display: "flex", gap: 18 }}>
-            {ADMIN_LINKS.map(({ to, label }) => (
-              <li key={to}><Link to={to} style={{ color: location.pathname === to ? "#FFD166" : "white", textDecoration: "none", fontWeight: location.pathname === to ? 700 : 500, padding: "6px 10px", borderRadius: 6 }}>{label}</Link></li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      <AdminNav links={ADMIN_LINKS} />
 
       <main style={{ padding: 20, maxWidth: 1000, margin: "auto" }}>
         {/* Form */}

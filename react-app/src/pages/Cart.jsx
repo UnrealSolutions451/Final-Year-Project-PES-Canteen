@@ -81,6 +81,19 @@ export default function Cart() {
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#F7FFF7", color: "#292F36", display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <style>{`
+        .cart-item { background:white; border-radius:12px; padding:12px; margin-bottom:12px;
+          display:flex; justify-content:space-between; align-items:center;
+          box-shadow:0 4px 6px rgba(0,0,0,0.1); gap:8px; flex-wrap:wrap; }
+        .cart-item-name { font-weight:500; flex:1; min-width:140px; font-size:.95rem; }
+        .cart-item-controls { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+        .cart-btn { padding:6px 10px; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:.85rem; }
+        .cart-actions { margin-top:30px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+        @media(max-width:480px){
+          .cart-item { flex-direction:column; align-items:flex-start; }
+          .cart-item-controls { width:100%; justify-content:flex-end; }
+        }
+      `}</style>
       <header style={{
         background: "#03045e", color: "white", padding: "15px 20px",
         textAlign: "center", position: "sticky", top: 0, zIndex: 100,
@@ -96,33 +109,30 @@ export default function Cart() {
           ) : (
             <>
               {cart.map((item, index) => (
-                <div key={index} style={{
-                  background: "white", borderRadius: 12, padding: 12,
-                  marginBottom: 12, display: "flex", justifyContent: "space-between",
-                  alignItems: "center", boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                }}>
-                  <div style={{ fontWeight: 500 }}>
-                    {item.name} - ₹{item.price} x {item.quantity || 1} = ₹{item.price * (item.quantity || 1)}
+                <div key={index} className="cart-item">
+                  <div className="cart-item-name">
+                    {item.name}<br />
+                    <span style={{ color: "#d22c27", fontWeight: 700 }}>₹{item.price} × {item.quantity || 1} = ₹{item.price * (item.quantity || 1)}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <button onClick={() => updateQty(index, -1)} style={{ padding: "6px 10px", background: "#FB8D22", color: "white", border: "none", borderRadius: 6, fontWeight: 600 }}>-</button>
-                    <span>{item.quantity || 1}</span>
-                    <button onClick={() => updateQty(index, 1)} style={{ padding: "6px 10px", background: "#FB8D22", color: "white", border: "none", borderRadius: 6, fontWeight: 600 }}>+</button>
-                    <button onClick={() => removeItem(index)} style={{ padding: "6px 10px", background: "#dc3545", color: "white", border: "none", borderRadius: 6, fontWeight: 600 }}>Remove</button>
+                  <div className="cart-item-controls">
+                    <button onClick={() => updateQty(index, -1)} className="cart-btn" style={{ background: "#FB8D22" }}>−</button>
+                    <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center" }}>{item.quantity || 1}</span>
+                    <button onClick={() => updateQty(index, 1)} className="cart-btn" style={{ background: "#FB8D22" }}>+</button>
+                    <button onClick={() => removeItem(index)} className="cart-btn" style={{ background: "#dc3545" }}>Remove</button>
                   </div>
                 </div>
               ))}
               <div style={{ marginTop: 15, fontWeight: "bold", fontSize: "1.1rem", textAlign: "right" }}>
                 Total: ₹{total}
               </div>
-              <div style={{ marginTop: 30, display: "flex", justifyContent: "center", gap: 10 }}>
+              <div className="cart-actions">
                 <button onClick={clearCart} style={{
-                  padding: "10px 16px", background: "#FB8D22", color: "white",
-                  border: "none", borderRadius: 12, fontWeight: 600, boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                  padding: "10px 20px", background: "#FB8D22", color: "white",
+                  border: "none", borderRadius: 12, fontWeight: 600, boxShadow: "0 4px 6px rgba(0,0,0,0.1)", fontSize: "1rem",
                 }}>Clear Cart</button>
                 <button onClick={placeOrder} style={{
-                  padding: "10px 16px", background: "#008000", color: "white",
-                  border: "none", borderRadius: 12, fontWeight: 600, boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                  padding: "10px 20px", background: "#008000", color: "white",
+                  border: "none", borderRadius: 12, fontWeight: 600, boxShadow: "0 4px 6px rgba(0,0,0,0.1)", fontSize: "1rem",
                 }}>Place Order</button>
               </div>
             </>

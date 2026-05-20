@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { signOut } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { db } from "../firebase";
+import AdminNav from "../components/AdminNav";
 
 const ADMIN_LINKS = [
-  { to: "/admin", label: "Dashboard" },
-  { to: "/analytics", label: "Analytics" },
-  { to: "/expenses", label: "Expenses" },
-  { to: "/staff", label: "Staff" },
+  { to: "/admin",      label: "Dashboard" },
+  { to: "/analytics",  label: "Analytics" },
+  { to: "/expenses",   label: "Expenses" },
+  { to: "/staff",      label: "Staff" },
 ];
 
 function normalizeDate(dateStr) {
@@ -17,11 +16,9 @@ function normalizeDate(dateStr) {
 }
 
 export default function AdminDashboard() {
-  const location = useLocation();
   const [allOrders, setAllOrders] = useState([]);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter]       = useState("all");
   const [activeBox, setActiveBox] = useState(null);
-  const [navOpen, setNavOpen] = useState(false);
   const unsubRef = useRef(null);
 
   useEffect(() => {
@@ -32,7 +29,7 @@ export default function AdminDashboard() {
     return () => unsubRef.current?.();
   }, []);
 
-  const todayDate = new Date().toISOString().split("T")[0];
+  const todayDate    = new Date().toISOString().split("T")[0];
   const currentMonth = todayDate.slice(0, 7);
 
   let todaySales = 0, monthSales = 0, totalSales = 0;
@@ -49,122 +46,109 @@ export default function AdminDashboard() {
 
   const filteredOrders = allOrders.filter(order => {
     const orderDate = normalizeDate(order.date);
-    if (filter === "today" && orderDate !== todayDate) return false;
-    if (filter === "month" && !orderDate.startsWith(currentMonth)) return false;
-    if (filter === "completed" && order.status !== "completed") return false;
-    if (filter === "pending" && !["pending", "accepted"].includes(order.status)) return false;
+    if (filter === "today"     && orderDate !== todayDate)                         return false;
+    if (filter === "month"     && !orderDate.startsWith(currentMonth))             return false;
+    if (filter === "completed" && order.status !== "completed")                    return false;
+    if (filter === "pending"   && !["pending","accepted"].includes(order.status))  return false;
     return true;
   });
 
-  const handleStatClick = (box, f) => {
-    setActiveBox(box);
-    setFilter(f);
-  };
+  const statCards = [
+    { id: "today", label: "Today's Sales",      value: `₹${todaySales}`,  f: "today" },
+    { id: "month", label: "This Month's Sales", value: `₹${monthSales}`,  f: "month" },
+    { id: "total", label: "Total Sales",        value: `₹${totalSales}`,  f: "all"   },
+  ];
 
   return (
-    <div style={{ background: "#F7FFF7", color: "#2b2c2d", minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-      <header style={{
-        display: "flex", justifyContent: "center",
-        background: "#03045e", color: "white", padding: "16px 20px",
-        textAlign: "center", fontSize: "2.2rem", fontWeight: 600,
-        position: "sticky", top: 0, zIndex: 100, boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-      }}>
-        Admin Dashboard
-        <div style={{ position: "fixed", top: 10, right: 10 }}>
-          <button
-            onClick={async () => { await signOut(auth); window.location.href = "/login"; }}
-            style={{ background: "#d22c27", color: "white", border: "none", padding: "8px 16px", borderRadius: 20, cursor: "pointer", fontSize: 14, fontWeight: "bold" }}
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+    <>
+      <style>{`
+        .adm-page { background:#F7FFF7; color:#2b2c2d; min-height:100dvh; display:flex; flex-direction:column; }
+        .adm-header { background:#03045e; color:#fff; padding:16px 20px; text-align:center; font-size:1.8rem; font-weight:700; box-shadow:0 4px 6px rgba(0,0,0,.1); }
+        .adm-main { padding:16px; width:100%; max-width:1100px; margin:0 auto; flex:1; }
+        .adm-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px; }
+        .adm-stat { border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.08); padding:16px; font-weight:700; cursor:pointer; text-align:center; transition:all .25s; }
+        .adm-stat:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.13); }
+        .adm-filter { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center; }
+        .adm-filter select { padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; font-size:.9rem; }
+        .adm-count { margin-bottom:14px; font-weight:600; text-align:center; color:#555; }
+        .adm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+        .adm-card { background:#fff; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,.08); padding:16px; display:flex; flex-direction:column; gap:6px; }
+        .adm-card p { margin:0; font-size:.93rem; }
+        .adm-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.8rem; font-weight:700; }
+        @media (max-width:600px) {
+          .adm-stats { grid-template-columns:1fr; }
+          .adm-header { font-size:1.4rem; padding:14px; }
+        }
+      `}</style>
 
-      {/* Nav */}
-      <nav style={{ background: "#03045e", color: "white", boxShadow: "0 3px 8px rgba(0,0,0,0.1)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px" }}>
-          <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>P.E.S. Canteen — Admin</div>
-          <button onClick={() => setNavOpen(o => !o)} style={{ fontSize: "1.4rem", background: "none", border: "none", color: "white", cursor: "pointer" }}>☰</button>
-          <ul style={{ listStyle: "none", display: "flex", gap: 18 }}>
-            {ADMIN_LINKS.map(({ to, label }) => (
-              <li key={to}>
-                <Link to={to} style={{ color: location.pathname === to ? "#FFD166" : "white", textDecoration: "none", fontWeight: location.pathname === to ? 700 : 500, padding: "6px 10px", borderRadius: 6 }}>
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      <div className="adm-page">
+        <header className="adm-header">Admin Dashboard</header>
+        <AdminNav links={ADMIN_LINKS} />
 
-      <main style={{ padding: 16, width: "100%", maxWidth: 1100, margin: "0 auto", flex: 1 }}>
-        {/* Stats */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
-          {[
-            { id: "today", label: `Today's Sales: ₹${todaySales}`, filter: "today" },
-            { id: "month", label: `This Month's Sales: ₹${monthSales}`, filter: "month" },
-            { id: "total", label: `Total Sales: ₹${totalSales}`, filter: "all" },
-          ].map(box => (
-            <div
-              key={box.id}
-              onClick={() => handleStatClick(box.id, box.filter)}
-              style={{
-                flex: "1 1 200px", background: activeBox === box.id ? "#28a745" : "white",
-                borderRadius: 12, boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                padding: "14px 16px", fontWeight: 700,
-                color: activeBox === box.id ? "white" : "#03045e",
-                cursor: "pointer", textAlign: "center", fontSize: "1rem", minWidth: 180,
-                transition: "all 0.3s ease",
-              }}
-            >
-              {box.label}
-            </div>
-          ))}
-        </div>
-
-        {/* Filter */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, alignItems: "center" }}>
-          <label style={{ fontWeight: 600, fontSize: "0.95rem", marginRight: 6 }}>Filter Orders:</label>
-          <select
-            value={filter}
-            onChange={e => { setFilter(e.target.value); setActiveBox(null); }}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white", fontSize: "0.9rem" }}
-          >
-            <option value="all">All</option>
-            <option value="today">Today</option>
-            <option value="month">This Month</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
-
-        <div style={{ marginBottom: 16, fontWeight: 600, textAlign: "center" }}>
-          Showing {filteredOrders.length} order{filteredOrders.length !== 1 ? "s" : ""}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-          {filteredOrders.length === 0 ? (
-            <p>No orders found.</p>
-          ) : filteredOrders.map(order => {
-            const origTotal = (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
-            const total = order.totalAmount || origTotal;
-            return (
-              <div key={order.id} style={{
-                background: "white", borderRadius: 12,
-                boxShadow: "0 4px 6px rgba(0,0,0,0.1)", padding: 16,
-                display: "flex", flexDirection: "column", gap: 8,
-              }}>
-                <p><strong style={{ color: "#03045e" }}>Table:</strong> {order.table || "-"}</p>
-                <p><strong style={{ color: "#03045e" }}>Items:</strong> {(order.items || []).map(i => `${i.name} x ${i.quantity || 1}`).join(", ")}</p>
-                <p><strong style={{ color: "#03045e" }}>Total:</strong> ₹{total}</p>
-                <p><strong style={{ color: "#03045e" }}>Order Code:</strong> {order.orderCode}</p>
-                <p><strong style={{ color: "#03045e" }}>Status:</strong> {order.status}</p>
-                <p><strong style={{ color: "#03045e" }}>Date:</strong> {order.date || "-"} <strong style={{ color: "#03045e" }}>Time:</strong> {order.time || "-"}</p>
+        <main className="adm-main">
+          {/* Stat cards */}
+          <div className="adm-stats">
+            {statCards.map(s => (
+              <div
+                key={s.id}
+                className="adm-stat"
+                onClick={() => { setActiveBox(s.id); setFilter(s.f); }}
+                style={{
+                  background: activeBox === s.id ? "#03045e" : "#fff",
+                  color:      activeBox === s.id ? "#FFD166"  : "#03045e",
+                }}
+              >
+                <div style={{ fontSize: "1.5rem", marginBottom: 4 }}>{s.value}</div>
+                <div style={{ fontSize: ".85rem", fontWeight: 500, opacity: .85 }}>{s.label}</div>
               </div>
-            );
-          })}
-        </div>
-      </main>
-    </div>
+            ))}
+          </div>
+
+          {/* Filter */}
+          <div className="adm-filter">
+            <label style={{ fontWeight: 600 }}>Filter Orders:</label>
+            <select value={filter} onChange={e => { setFilter(e.target.value); setActiveBox(null); }}>
+              <option value="all">All</option>
+              <option value="today">Today</option>
+              <option value="month">This Month</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+
+          <div className="adm-count">Showing {filteredOrders.length} order{filteredOrders.length !== 1 ? "s" : ""}</div>
+
+          <div className="adm-grid">
+            {filteredOrders.length === 0 ? (
+              <p style={{ color: "#888" }}>No orders found.</p>
+            ) : filteredOrders.map(order => {
+              const origTotal = (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
+              const total = order.totalAmount || origTotal;
+              const statusColour = {
+                pending:   { bg: "#fff3cd", color: "#856404" },
+                accepted:  { bg: "#cce5ff", color: "#004085" },
+                ready:     { bg: "#d4edda", color: "#155724" },
+                completed: { bg: "#d4edda", color: "#155724" },
+              }[order.status] || { bg: "#eee", color: "#333" };
+
+              return (
+                <div key={order.id} className="adm-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <strong style={{ color: "#03045e", fontSize: "1rem" }}>{order.orderCode || "-"}</strong>
+                    <span className="adm-badge" style={{ background: statusColour.bg, color: statusColour.color }}>
+                      {order.status}
+                    </span>
+                  </div>
+                  <p><strong style={{ color: "#03045e" }}>Table:</strong> {order.table || "-"}</p>
+                  <p><strong style={{ color: "#03045e" }}>Items:</strong> {(order.items || []).map(i => `${i.name} x${i.quantity || 1}`).join(", ")}</p>
+                  <p><strong style={{ color: "#03045e" }}>Total:</strong> ₹{total}</p>
+                  <p style={{ color: "#888", fontSize: ".85rem" }}>{order.date || "-"} &nbsp;{order.time || ""}</p>
+                </div>
+              );
+            })}
+          </div>
+        </main>
+      </div>
+    </>
   );
 }

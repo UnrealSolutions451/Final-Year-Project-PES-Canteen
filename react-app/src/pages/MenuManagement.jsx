@@ -1,20 +1,18 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { signOut } from "firebase/auth";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { db } from "../firebase";
+import AdminNav from "../components/AdminNav";
 
 const STAFF_LINKS = [
-  { to: "/canteen", label: "Canteen Panel" },
-  { to: "/menu-management", label: "Menu" },
-  { to: "/add-menu", label: "Add/Edit Menu" },
+  { to: "/canteen",          label: "Canteen Panel" },
+  { to: "/menu-management",  label: "Menu" },
+  { to: "/add-menu",         label: "Add/Edit Menu" },
   { to: "/staff-attendance", label: "Staff Attendance" },
-  { to: "/kot", label: "KOT" },
-  { to: "/ready", label: "Ready Screen" },
+  { to: "/kot",              label: "KOT" },
+  { to: "/ready",            label: "Ready Screen" },
 ];
 
 export default function MenuManagement() {
-  const location = useLocation();
   const [allItems, setAllItems] = useState([]);
   const [search, setSearch] = useState("");
 
@@ -39,27 +37,10 @@ export default function MenuManagement() {
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif", background: "#f7f7f7", margin: 0, padding: 0 }}>
-      <header style={{
-        background: "#03045e", color: "white", padding: 15,
-        textAlign: "center", fontSize: "1.75rem", fontWeight: "bold",
-        height: 60, position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
+      <header style={{ background: "#03045e", color: "white", padding: 15, textAlign: "center", fontSize: "1.6rem", fontWeight: "bold", boxShadow: "0 4px 6px rgba(0,0,0,.1)" }}>
         Menu Availability
-        <div style={{ position: "absolute", top: 15, right: 20 }}>
-          <button onClick={async () => { await signOut(auth); window.location.href = "/login"; }} style={{ background: "#d22c27", color: "white", border: "none", padding: "8px 16px", borderRadius: 20, cursor: "pointer", fontSize: 14, fontWeight: "bold" }}>⏻</button>
-        </div>
       </header>
-
-      <nav style={{ background: "#03045e", color: "white", boxShadow: "0 3px 8px rgba(0,0,0,0.1)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px" }}>
-          <div></div>
-          <ul style={{ listStyle: "none", display: "flex", gap: 18 }}>
-            {STAFF_LINKS.map(({ to, label }) => (
-              <li key={to}><Link to={to} style={{ color: location.pathname === to ? "#FFD166" : "white", textDecoration: "none", fontWeight: location.pathname === to ? 700 : 500, padding: "6px 10px", borderRadius: 6 }}>{label}</Link></li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      <AdminNav links={STAFF_LINKS} logoText="P.E.S. Canteen — Staff" />
 
       <div style={{ display: "flex", justifyContent: "right", padding: 10, background: "white", gap: 8, boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
         <input

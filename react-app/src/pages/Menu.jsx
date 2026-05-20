@@ -4,6 +4,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import Toast, { showToast } from "../components/Toast";
 import SiteFooter from "../components/SiteFooter";
+import ChatBot from "../components/ChatBot";
 
 const CATEGORIES = ["All", "Drinks", "Food", "Snacks", "Chinese", "Extra"];
 const VEG_ICON = "https://i.ibb.co/Q4tdkcG/Screenshot-2025-08-23-124910.png";
@@ -80,14 +81,33 @@ export default function Menu() {
 
   return (
     <div style={{ background: "#F7FFF7", color: "#292F36", paddingBottom: 120 }}>
+      <style>{`
+        .menu-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:15px; padding:15px; }
+        @media(max-width:400px){ .menu-grid { grid-template-columns:repeat(2,1fr); gap:10px; padding:10px; } }
+        .menu-header { background:#03045e; color:white; position:sticky; top:0; z-index:100;
+          box-shadow:0 4px 6px rgba(0,0,0,0.1); display:flex; align-items:center;
+          justify-content:center; padding:0 20px; height:70px; }
+        .menu-logo { height:54px; width:auto; position:absolute; left:14px; object-fit:contain; }
+        .menu-header-title { font-size:1.4rem; text-align:center; margin:0; padding:0 70px; }
+        .menu-cat-bar { display:flex; overflow-x:auto; padding:10px; gap:8px; background:white;
+          position:sticky; top:70px; z-index:90; box-shadow:0 2px 4px rgba(0,0,0,0.05);
+          scrollbar-width:none; }
+        .menu-cat-bar::-webkit-scrollbar { display:none; }
+        @media(max-width:480px){
+          .menu-logo  { height:38px; left:10px; }
+          .menu-header-title { font-size:1rem; padding:0 54px; }
+          .menu-header { height:58px; }
+          .menu-cat-bar { top:58px; }
+        }
+        @media(max-width:320px){
+          .menu-logo { display:none; }
+          .menu-header-title { padding:0; }
+        }
+      `}</style>
       {/* Header */}
-      <header style={{
-        background: "#03045e", color: "white", height: 90, padding: "10px 20px",
-        position: "sticky", top: 0, zIndex: 100, boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-        display: "flex", alignItems: "center", justifyContent: "center", minHeight: 70,
-      }}>
-        <img src="/Pes_logo.png" alt="Logo" style={{ position: "absolute", left: 20, maxHeight: 80, height: "auto", width: "auto" }} />
-        <h1 style={{ fontSize: "1.5rem", textAlign: "center" }}>P.E.S. Canteen Menu</h1>
+      <header className="menu-header">
+        <img src="/Pes_logo.png" alt="Logo" className="menu-logo" />
+        <h1 className="menu-header-title">P.E.S. Canteen Menu</h1>
       </header>
 
       {/* Banner */}
@@ -110,10 +130,7 @@ export default function Menu() {
       </div>
 
       {/* Category filters */}
-      <div style={{
-        display: "flex", overflowX: "auto", padding: 10, gap: 8, background: "white",
-        position: "sticky", top: 90, zIndex: 90, boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-      }}>
+      <div className="menu-cat-bar">
         {CATEGORIES.map(cat => (
           <button
             key={cat}
@@ -132,7 +149,7 @@ export default function Menu() {
       </div>
 
       {/* Menu grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 15, padding: 15 }}>
+      <div className="menu-grid">
         {loading ? (
           <p>Loading menu…</p>
         ) : filteredItems.length === 0 ? (
@@ -214,6 +231,7 @@ export default function Menu() {
         </Link>
       </div>
 
+      <ChatBot tableId={tableId} sessionId={sessionId} />
       <Toast />
     </div>
   );

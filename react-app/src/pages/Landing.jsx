@@ -32,37 +32,28 @@ export default function Landing() {
       minHeight: "100vh",
       textAlign: "center",
     }}>
-      <div style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-start",
-        alignItems: "center",
-        padding: "100px 15px 15px",
-      }}>
-        <img src="/Pes_logo.png" alt="P.E.S. Canteen Logo" style={{ maxWidth: 450, height: "auto", marginBottom: 20 }} />
-        <h1 style={{ fontSize: "4rem", fontWeight: 700, marginBottom: 20, lineHeight: 1.3 }}>
-          Welcome to<br />P.E.S. Canteen!
-        </h1>
-        <p style={{ fontSize: "2.5rem", lineHeight: 1.7, maxWidth: 600, margin: "0 auto 30px" }}>
-          Tap the button below to open the menu and start ordering!
-        </p>
+      <style>{`
+        .landing-hero { flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; padding:80px 20px 20px; }
+        .landing-logo { max-width:380px; height:auto; margin-bottom:20px; width:80%; }
+        .landing-h1   { font-size:3.2rem; font-weight:700; margin-bottom:20px; line-height:1.3; }
+        .landing-p    { font-size:1.8rem; line-height:1.7; max-width:600px; margin:0 auto 30px; }
+        .landing-btn  { background:#FFD166; color:#03045e; font-size:2rem; font-weight:bold;
+                        padding:16px 30px; border:none; border-radius:14px; cursor:pointer;
+                        width:100%; max-width:480px; height:90px; transition:all 0.3s ease; }
+        @media(max-width:600px){
+          .landing-hero { padding:40px 16px 16px; }
+          .landing-h1   { font-size:2rem; }
+          .landing-p    { font-size:1.15rem; }
+          .landing-btn  { font-size:1.3rem; height:66px; }
+        }
+      `}</style>
+      <div className="landing-hero">
+        <img src="/Pes_logo.png" alt="P.E.S. Canteen Logo" className="landing-logo" />
+        <h1 className="landing-h1">Welcome to<br />P.E.S. Canteen!</h1>
+        <p className="landing-p">Tap the button below to open the menu and start ordering!</p>
         <button
           onClick={handleOpen}
-          style={{
-            background: "#FFD166",
-            color: "#03045e",
-            fontSize: "3rem",
-            fontWeight: "bold",
-            padding: "18px 30px",
-            border: "none",
-            borderRadius: 14,
-            cursor: "pointer",
-            width: "100%",
-            maxWidth: 500,
-            height: 120,
-            transition: "all 0.3s ease",
-          }}
+          className="landing-btn"
           onMouseOver={e => { e.currentTarget.style.background = "#ffb703"; e.currentTarget.style.transform = "scale(1.05)"; }}
           onMouseOut={e => { e.currentTarget.style.background = "#FFD166"; e.currentTarget.style.transform = "scale(1)"; }}
         >

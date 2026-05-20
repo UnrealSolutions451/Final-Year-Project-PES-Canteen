@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { signOut, getAuth } from "firebase/auth";
 import {
   collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc,
   serverTimestamp, query, where, orderBy
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import AdminNav from "../components/AdminNav";
 
 const ADMIN_LINKS = [
-  { to: "/admin", label: "Dashboard" },
+  { to: "/admin",     label: "Dashboard" },
   { to: "/analytics", label: "Analytics" },
-  { to: "/expenses", label: "Expenses" },
-  { to: "/staff", label: "Staff" },
+  { to: "/expenses",  label: "Expenses" },
+  { to: "/staff",     label: "Staff" },
 ];
 
 function computeNextSalaryDate(lastPaid, freq) {
@@ -28,7 +27,6 @@ function getColor(days) {
 }
 
 export default function StaffManagement() {
-  const location = useLocation();
   const [staffList, setStaffList] = useState([]);
   const [salaryHistory, setSalaryHistory] = useState([]);
   const [editMode, setEditMode] = useState(false);
@@ -119,23 +117,10 @@ export default function StaffManagement() {
 
   return (
     <div style={{ background: "#efefef", color: "#17202a", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <header style={{ background: "#03045e", color: "#fff", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", top: 0, zIndex: 30, fontWeight: 700, fontSize: "1.25rem" }}>
+      <header style={{ background: "#03045e", color: "#fff", padding: "16px 20px", textAlign: "center", fontWeight: 700, fontSize: "1.25rem", boxShadow: "0 4px 6px rgba(0,0,0,.1)" }}>
         Staff Management
-        <div style={{ position: "absolute", right: 18, top: 12 }}>
-          <button onClick={async () => { await signOut(auth); window.location.href = "/login"; }} style={{ background: "#d22c27", color: "white", border: "none", padding: "8px 12px", borderRadius: 18, cursor: "pointer", fontWeight: 700 }}>Logout</button>
-        </div>
       </header>
-
-      <nav style={{ background: "#03045e", color: "white", boxShadow: "0 3px 8px rgba(0,0,0,0.1)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px" }}>
-          <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>P.E.S. Canteen — Admin</div>
-          <ul style={{ listStyle: "none", display: "flex", gap: 18 }}>
-            {ADMIN_LINKS.map(({ to, label }) => (
-              <li key={to}><Link to={to} style={{ color: location.pathname === to ? "#FFD166" : "white", textDecoration: "none", fontWeight: location.pathname === to ? 700 : 500, padding: "6px 10px", borderRadius: 6 }}>{label}</Link></li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      <AdminNav links={ADMIN_LINKS} />
 
       <main style={{ maxWidth: 1100, margin: "18px auto", width: "94%", flex: 1 }}>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
