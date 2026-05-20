@@ -43,6 +43,10 @@ RULES:
 - If the user gives two or more choices (e.g. "should I get X or Y?", "X or Y?"), confidently pick ONE and briefly say why.
 - If the user picks or names one of your suggestions, confirm it enthusiastically and say one great thing about it.
 - Always respond in English or Hinglish. Hinglish means Hindi words written in English/Roman letters (e.g. "Bhai sahi choice hai!", "Yaar ekdum mast option hai!", "Kya loge aaj?"). NEVER use Devanagari (Hindi script). Keep prices in ₹.
+- CART RULES — choose based on how clearly the user wants to order:
+  • DIRECT ORDER (user explicitly says add/order/get/give/dena/chahiye + item name, e.g. "add 2 samosas", "order a coffee", "ek sandwich dena"): respond warmly AND append at the very end: [ADD:ExactItemName:Quantity]
+  • IMPLIED INTEREST (user says they like something or will take it but didn't explicitly say add/order, e.g. "I'll take the samosa", "that sounds good", "the paneer wrap looks nice"): respond and ask "Want me to add it to your cart? 🛒" AND append at the very end: [CONFIRM:ExactItemName:Quantity]
+  • Use the EXACT item name from the menu. If quantity not mentioned, use 1.
 
 TODAY'S AVAILABLE MENU:
 ${menuText || "Menu is loading..."}`;
@@ -87,6 +91,46 @@ function ruleBasedReply(text, menuItems) {
   return `Here's what I'd suggest today: ${list} 😊 Want me to narrow it down further?`;
 }
 
+// ── Cart helpers ───────────────────────────────────────────
+function findMenuItem(name, menuItems) {
+  const q = normalize(name);
+  return menuItems.find(i => normalize(i.name) === q)
+      || menuItems.find(i => normalize(i.name).includes(q) || q.includes(normalize(i.name)));
+}
+
+function parseCartActions(text) {
+  const actions = [];
+  let confirm   = null;
+  let cleaned   = text.replace(/\[ADD:([^\]:]+):(\d+)\]/gi, (_, name, qty) => {
+    actions.push({ name: name.trim(), qty: Math.max(1, parseInt(qty) || 1) });
+    return "";
+  });
+  cleaned = cleaned.replace(/\[CONFIRM:([^\]:]+):(\d+)\]/gi, (_, name, qty) => {
+    confirm = { name: name.trim(), qty: Math.max(1, parseInt(qty) || 1) };
+    return "";
+  });
+  return { cleaned: cleaned.trim(), actions, confirm };
+}
+
+function executeCartActions(actions, menuItems, cartKey) {
+  if (!actions.length) return [];
+  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const added = [];
+  actions.forEach(({ name, qty }) => {
+    const item = findMenuItem(name, menuItems);
+    if (!item) return;
+    const idx = cart.findIndex(ci => ci.id === item.id);
+    if (idx >= 0) cart[idx].quantity = (cart[idx].quantity || 1) + qty;
+    else cart.push({ id: item.id, name: item.name, price: item.price, quantity: qty });
+    added.push({ name: item.name, price: item.price, qty });
+  });
+  if (added.length) {
+    localStorage.setItem(cartKey, JSON.stringify(cart));
+    window.dispatchEvent(new CustomEvent("cart-updated"));
+  }
+  return added;
+}
+
 // ── Typing indicator ───────────────────────────────────────
 function TypingDots() {
   return (
@@ -112,7 +156,8 @@ export default function ChatBot({ tableId, sessionId }) {
   const [menuLoaded, setMenuLoaded]   = useState(false);
   const [sysPrompt, setSysPrompt]     = useState("");
   const [pulse, setPulse]             = useState(true);
-  const [usingAI, setUsingAI]         = useState(true);
+  const [usingAI, setUsingAI]           = useState(true);
+  const [pendingConfirm, setPendingConfirm] = useState(null); // {name, qty}
 
   // Voice state
   const [listening, setListening]   = useState(false);
@@ -231,6 +276,38 @@ export default function ChatBot({ tableId, sessionId }) {
 
     setInput("");
     setMessages(prev => [...prev, { role: "user", text: trimmed }]);
+
+    // ── Confirmation flow ──────────────────────────────────
+    if (pendingConfirm) {
+      const isYes = /\b(yes|yeah|yep|sure|ok|okay|haan|ha|add|go ahead|do it|please|yaar|bhai|please)\b/i.test(trimmed);
+      const isNo  = /\b(no|nope|nahi|mat|cancel|don't|dont|leave|nope|skip)\b/i.test(trimmed);
+      const cartKey = `cart_${tableId}_${sessionId}`;
+
+      if (isYes) {
+        const added = executeCartActions([pendingConfirm], menuItems, cartKey);
+        setPendingConfirm(null);
+        if (added.length) {
+          const summary = added.map(a => `${a.qty}× ${a.name} (₹${a.price * a.qty})`).join(", ");
+          setMessages(prev => [...prev,
+            { role: "bot",  text: "Done! Added to your cart 🎉 Enjoy your meal!" },
+            { role: "cart", text: `🛒 Added to cart: ${summary}` },
+          ]);
+        }
+        speak("Done! Added to your cart. Enjoy your meal!");
+        return;
+      }
+      if (isNo) {
+        setPendingConfirm(null);
+        setMessages(prev => [...prev,
+          { role: "bot", text: "No worries! Let me know if you change your mind 😊" },
+        ]);
+        speak("No worries! Let me know if you change your mind.");
+        return;
+      }
+      // User said something else — clear pending and answer normally
+      setPendingConfirm(null);
+    }
+
     setLoading(true);
 
     const updatedHistory = [...groqHistory, { role: "user", content: trimmed }];
@@ -268,10 +345,23 @@ export default function ChatBot({ tableId, sessionId }) {
 
     if (!reply) reply = ruleBasedReply(trimmed, menuItems);
 
-    setGroqHistory([...updatedHistory, { role: "assistant", content: reply }]);
-    setMessages(prev => [...prev, { role: "bot", text: reply }]);
+    // Parse [ADD:...] / [CONFIRM:...] tags and act on them
+    const cartKey = `cart_${tableId}_${sessionId}`;
+    const { cleaned, actions, confirm } = parseCartActions(reply);
+    const added = executeCartActions(actions, menuItems, cartKey);
+
+    if (confirm) setPendingConfirm(confirm);
+
+    setGroqHistory([...updatedHistory, { role: "assistant", content: cleaned }]);
+
+    const newMsgs = [{ role: "bot", text: cleaned }];
+    if (added.length) {
+      const summary = added.map(a => `${a.qty}× ${a.name} (₹${a.price * a.qty})`).join(", ");
+      newMsgs.push({ role: "cart", text: `🛒 Added to cart: ${summary}` });
+    }
+    setMessages(prev => [...prev, ...newMsgs]);
     setLoading(false);
-    speak(reply);
+    speak(cleaned);
   }
 
   function sendMessage() { sendWithText(input); }
@@ -342,6 +432,11 @@ export default function ChatBot({ tableId, sessionId }) {
           border-radius:18px 18px 4px 18px;
           padding:10px 14px; font-size:.92rem; line-height:1.5;
           max-width:84%; align-self:flex-end; word-break:break-word;
+        }
+        .cb-bubble-cart {
+          background:#ecfdf5; color:#065f46; border:1.5px solid #6ee7b7;
+          border-radius:12px; padding:8px 13px; font-size:.85rem;
+          font-weight:600; align-self:flex-start; max-width:92%;
         }
         .cb-chips {
           display:flex; gap:6px; padding:0 12px 8px; flex-wrap:wrap; flex-shrink:0;
@@ -461,7 +556,11 @@ export default function ChatBot({ tableId, sessionId }) {
           {/* Messages */}
           <div className="cb-messages">
             {messages.map((m, i) => (
-              <div key={i} className={m.role === "bot" ? "cb-bubble-bot" : "cb-bubble-user"}>
+              <div key={i} className={
+                m.role === "bot"  ? "cb-bubble-bot"  :
+                m.role === "cart" ? "cb-bubble-cart" :
+                                    "cb-bubble-user"
+              }>
                 {m.text}
               </div>
             ))}
@@ -478,8 +577,18 @@ export default function ChatBot({ tableId, sessionId }) {
             <div ref={bottomRef} />
           </div>
 
-          {/* Quick chips */}
-          {messages.filter(m => m.role === "user").length === 0 && (
+          {/* Yes/No confirmation chips */}
+          {pendingConfirm && !loading && (
+            <div className="cb-chips">
+              <button className="cb-chip" style={{ background:"#dcfce7", color:"#166534", fontWeight:700 }}
+                onClick={() => sendWithText("yes")}>✅ Yes, add it!</button>
+              <button className="cb-chip" style={{ background:"#fee2e2", color:"#991b1b", fontWeight:700 }}
+                onClick={() => sendWithText("no")}>❌ No thanks</button>
+            </div>
+          )}
+
+          {/* Quick chips — before first message */}
+          {!pendingConfirm && messages.filter(m => m.role === "user").length === 0 && (
             <div className="cb-chips">
               {CHIPS.map(chip => (
                 <button

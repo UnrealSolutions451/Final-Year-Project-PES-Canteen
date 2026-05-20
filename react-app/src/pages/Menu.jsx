@@ -79,6 +79,13 @@ export default function Menu() {
 
   const [cartCount, setCartCount] = useState(getCartCount);
 
+  // Sync cart badge when ChatBot adds items
+  useEffect(() => {
+    const sync = () => setCartCount(getCartCount());
+    window.addEventListener("cart-updated", sync);
+    return () => window.removeEventListener("cart-updated", sync);
+  }, []);
+
   return (
     <div style={{ background: "#F7FFF7", color: "#292F36", paddingBottom: 120 }}>
       <style>{`
