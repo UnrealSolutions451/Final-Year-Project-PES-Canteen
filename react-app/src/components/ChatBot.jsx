@@ -54,41 +54,150 @@ ${menuText || "Menu is loading..."}`;
 
 // ── Rule-based fallback ────────────────────────────────────
 function ruleBasedReply(text, menuItems) {
-  const q = normalize(text);
-  let items = menuItems.filter(i => i.available === true);
-  if (items.length === 0)
+  const q    = normalize(text);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const available = menuItems.filter(i => i.available === true);
+
+  // ── Greetings ──────────────────────────────────────────
+  if (/^(hi+|hello+|hey+|helo+|hii+|namaste|hola|sup|wassup|yo\b|heya|howdy|good\s*(morning|afternoon|evening))/.test(q)) {
+    return pick([
+      "Hey! 👋 I'm BiteBuddy — your canteen food guide! What are you in the mood for today? 😄",
+      "Hello there! 😊 Ready to find you something yummy! Veg, non-veg, or something light?",
+      "Hey hey! 🍽️ BiteBuddy here! What's the vibe today — proper hungry or just snacky?",
+      "Hi! Welcome to P.E.S. Canteen 🎉 Tell me what you're craving and I'll sort you out!",
+      "Namaste! 🙏 Kya loge aaj? Tell me your mood and I'll find the perfect match!",
+      "Yo! 😄 What are we eating today? I know every item on the menu — just ask!",
+    ]);
+  }
+
+  // ── Thank you ──────────────────────────────────────────
+  if (/\b(thank(s| you)?|shukriya|dhanyawad|ty\b|thx|appreciate)\b/.test(q)) {
+    return pick([
+      "You're welcome! 😊 Enjoy your meal! Let me know if you need anything else.",
+      "Anytime! 🍽️ Hope you enjoy it — come back if you need more recs!",
+      "Happy to help! 😄 Bon appétit!",
+      "My pleasure! 🙌 Enjoy your food, yaar!",
+      "Koi baat nahi! 😄 Enjoy your meal!",
+    ]);
+  }
+
+  // ── Farewell ───────────────────────────────────────────
+  if (/\b(bye|goodbye|see\s*ya|cya|alvida|later|take\s*care|baad\s*mein)\b/.test(q)) {
+    return pick([
+      "Bye! 👋 Come back hungry! 😄",
+      "See you! 🍽️ Hope you enjoyed your meal at P.E.S. Canteen!",
+      "Later! 😊 Come back soon, yaar!",
+      "Alvida! 👋 It was great helping you today!",
+    ]);
+  }
+
+  // ── How are you ────────────────────────────────────────
+  if (/\b(how are you|kya haal|what'?s up|kaisa hai|all good|you okay)\b/.test(q)) {
+    return pick([
+      "Doing great, thanks! 😄 More importantly — what are YOU eating today? 🍽️",
+      "I'm always in food mode 🍔 What are you craving?",
+      "Ekdum mast! 🎉 Ready to help you find the best bite today. What's the plan?",
+      "Never better! 😄 Now tell me — hungry or just snacky?",
+    ]);
+  }
+
+  // ── Who are you / what can you do ─────────────────────
+  if (/\b(who are you|what are you|your name|introduce|what can you|bitebuddy|help me|help)\b/.test(q)) {
+    return "I'm BiteBuddy 🍔 — your AI food guide at P.E.S. Canteen! I can recommend dishes, filter veg/non-veg, find budget meals, suggest healthy options, and even add items to your cart. Just ask! 😄";
+  }
+
+  // ── Show menu / what's available ──────────────────────
+  if (/\b(menu|what.*available|kya hai aaj|show.*item|full list|today.*special|kya kya hai)\b/.test(q)) {
+    if (available.length === 0) return "Menu is being updated right now! Check back in a bit 😊";
+    const sample = available.slice(0, 4).map(i => `${i.name} (₹${i.price})`).join(", ");
+    return pick([
+      `Today we have ${available.length} items! Highlights: ${sample} and more. What sounds good? 😄`,
+      `${available.length} items are available today! Like ${sample}... What are you in the mood for? 🍽️`,
+    ]);
+  }
+
+  // ── Price / how much ───────────────────────────────────
+  if (/\b(price|cost|kitna|how much|rate|expensive|range)\b/.test(q)) {
+    if (available.length === 0) return "Menu is loading! Try again in a sec 😊";
+    const sorted   = [...available].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+    const cheapest = sorted[0];
+    const priciest = sorted[sorted.length - 1];
+    return `Prices range from ₹${cheapest.price} (${cheapest.name}) up to ₹${priciest.price} (${priciest.name}). What's your budget? 💰`;
+  }
+
+  // ── Positive feedback ──────────────────────────────────
+  if (/^(good|nice|cool|awesome|great|amazing|superb|perfect|loved?\s*it|delicious|tasty|yummy|mast\b)/.test(q)) {
+    return pick([
+      "Glad you liked it! 😄 Come back anytime for more recs!",
+      "Awesome! 🎉 Good food = good mood! Let me know if you want anything else.",
+      "Yaar sahi bola! 😄 Enjoy your meal!",
+    ]);
+  }
+
+  // ── No menu items available guard ─────────────────────
+  if (available.length === 0)
     return "Hmm, the menu seems empty right now 😅 Please check back in a bit!";
 
+  // ── Food preference filtering ──────────────────────────
+  let items = [...available];
+
   const wantsVeg    = /\bveg(etarian)?\b/.test(q) && !/non.?veg/.test(q);
-  const wantsNonVeg = /non.?veg|chicken|meat|egg/.test(q);
+  const wantsNonVeg = /\b(non.?veg|chicken|meat|egg)\b/.test(q);
   if (wantsVeg)    items = items.filter(i => normalize(i.ty) === "veg");
   if (wantsNonVeg) items = items.filter(i => normalize(i.ty) === "non-veg");
 
-  if (/\bdrink|juice|water|beverage/.test(q))
+  if      (/\b(drink|juice|water|beverage|chai|coffee|tea)\b/.test(q))
     items = items.filter(i => normalize(i.category) === "drinks" || normalize(i.ty) === "drinks");
-  else if (/\bsnack/.test(q))
+  else if (/\bsnack\b/.test(q))
     items = items.filter(i => normalize(i.category) === "snacks");
-  else if (/chinese/.test(q))
+  else if (/\bchinese\b/.test(q))
     items = items.filter(i => normalize(i.category) === "chinese");
 
-  const wantsBudget  = /cheap|budget|afford|low.?cost|inexpensive|sasta/.test(q);
-  const wantsFilling = /fill|protein|heavy|hungry|hearty|bhari/.test(q);
-  const wantsHealthy = /healthy|light|diet|low.?cal|nutritious/.test(q);
+  const wantsBudget  = /\b(cheap|budget|afford|low.?cost|inexpensive|sasta|kam\s*daam)\b/.test(q);
+  const wantsFilling = /\b(fill|protein|heavy|hungry|hearty|bhari|bhook)\b/.test(q);
+  const wantsHealthy = /\b(healthy|light|diet|low.?cal|nutritious|fit)\b/.test(q);
 
   if (wantsBudget)  items = [...items].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
   if (wantsFilling) items = [...items].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
 
-  if (items.length === 0) items = menuItems.filter(i => i.available === true);
+  // Fallback to full list if filters wiped everything
+  if (items.length === 0) items = available;
 
   const picks = items.slice(0, 3);
   const list  = picks.map(p => `${p.name} (₹${p.price})`).join(", ");
 
-  if (wantsBudget)  return `Best budget picks today: ${list} 💰 Easy on the wallet!`;
-  if (wantsHealthy) return `Healthy options I'd suggest: ${list} 🥗 Light and nutritious!`;
-  if (wantsFilling) return `These'll keep you full: ${list} 💪 Proper hearty meals!`;
-  if (wantsVeg)     return `Top veg picks today: ${list} 🌿 Fresh and tasty!`;
-  if (wantsNonVeg)  return `Non-veg options available: ${list} 🍗 Delicious!`;
-  return `Here's what I'd suggest today: ${list} 😊 Want me to narrow it down further?`;
+  if (wantsBudget)  return pick([
+    `Best budget picks today: ${list} 💰 Easy on the wallet!`,
+    `Sasta aur mast! Check these out: ${list} 💰`,
+    `These won't burn a hole in your pocket: ${list} 💰 Great value!`,
+  ]);
+  if (wantsHealthy) return pick([
+    `Healthy options I'd suggest: ${list} 🥗 Light and nutritious!`,
+    `Eating clean today? Try: ${list} 🥗 Good choices yaar!`,
+    `These are your best healthy bets: ${list} 🥗`,
+  ]);
+  if (wantsFilling) return pick([
+    `These'll keep you full: ${list} 💪 Proper hearty meals!`,
+    `Hungry? These are the most filling: ${list} 💪 Zero chance of hunger after this!`,
+    `Bhari bhari meal chahiye? Try: ${list} 💪 You won't need snacks after this!`,
+  ]);
+  if (wantsVeg)     return pick([
+    `Top veg picks today: ${list} 🌿 Fresh and tasty!`,
+    `Pure veg and totally worth it: ${list} 🌿`,
+    `Veg lovers, these are for you: ${list} 🌿 Ekdum fresh!`,
+  ]);
+  if (wantsNonVeg)  return pick([
+    `Non-veg options available: ${list} 🍗 Delicious!`,
+    `For the non-veg lovers: ${list} 🍗 Proper tasty!`,
+    `Maans khana hai? Try these: ${list} 🍗`,
+  ]);
+
+  return pick([
+    `Here's what I'd suggest today: ${list} 😊 Want me to narrow it down?`,
+    `These are solid choices right now: ${list} 😄 Any preference — veg, budget, or filling?`,
+    `Ooh try these: ${list} 😋 Or tell me your mood and I'll pick the perfect one!`,
+    `Can't go wrong with: ${list} 🍽️ Want something more specific?`,
+  ]);
 }
 
 // ── Cart helpers ───────────────────────────────────────────
